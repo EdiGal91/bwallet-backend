@@ -11,12 +11,20 @@ import { LocalStrategy } from './strategies/local.strategy';
 import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
 import { SessionService } from './services/session.service';
 import { Session, SessionSchema } from './schemas/session.schema';
+import { VerificationService } from './services/verification.service';
+import {
+  VerificationToken,
+  VerificationTokenSchema,
+} from './schemas/verification-token.schema';
 
 @Module({
   imports: [
     UsersModule,
     PassportModule,
-    MongooseModule.forFeature([{ name: Session.name, schema: SessionSchema }]),
+    MongooseModule.forFeature([
+      { name: Session.name, schema: SessionSchema },
+      { name: VerificationToken.name, schema: VerificationTokenSchema },
+    ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -33,6 +41,7 @@ import { Session, SessionSchema } from './schemas/session.schema';
     LocalStrategy,
     JwtRefreshStrategy,
     SessionService,
+    VerificationService,
   ],
   exports: [AuthService],
 })

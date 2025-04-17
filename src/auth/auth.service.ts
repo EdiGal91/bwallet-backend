@@ -7,6 +7,7 @@ import { CreateUserDto } from '../users/dto/create-user.dto';
 import { User, UserDocument } from '../users/schemas/user.schema';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
 import { SessionService } from './services/session.service';
+import { VerificationService } from './services/verification.service';
 
 @Injectable()
 export class AuthService {
@@ -15,6 +16,7 @@ export class AuthService {
     private jwtService: JwtService,
     private configService: ConfigService,
     private sessionService: SessionService,
+    private verificationService: VerificationService,
   ) {}
 
   async validateUser(
@@ -37,10 +39,35 @@ export class AuthService {
   }
 
   async register(createUserDto: CreateUserDto): Promise<User> {
-    return this.usersService.create(createUserDto);
+    // Create the user
+    const user = await this.usersService.create(createUserDto);
+
+    // Generate verification token
+    const token = await this.verificationService.generateVerificationToken(
+      (user as UserDocument).id,
+    );
+
+    // Here you would send an email with the verification link
+    // We'll just log it for demonstration purposes
+    console.log(
+      `Verification link: http://localhost:4000/api/v1/auth/verify-email?token=${token}`,
+    );
+
+    return user;
+  }
+
+  async verifyEmail(token: string): Promise<User> {
+    return this.verificationService.verifyEmail(token);
   }
 
   async login(user: UserDocument, request?: Request, response?: Response) {
+    // Check if email is verified
+    if (!user.isEmailVerified) {
+      throw new UnauthorizedException(
+        'Please verify your email address before logging in',
+      );
+    }
+
     const payload: JwtPayload = {
       email: user.email,
       sub: user.id,

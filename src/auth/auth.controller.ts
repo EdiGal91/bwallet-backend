@@ -8,6 +8,8 @@ import {
   Res,
   UseGuards,
   UnauthorizedException,
+  Get,
+  Query,
 } from '@nestjs/common';
 import { Request as ExpressRequest, Response } from 'express';
 import { AuthService } from './auth.service';
@@ -46,9 +48,26 @@ export class AuthController {
     @Res({ passthrough: true }) response: Response,
   ): Promise<User> {
     const user = await this.authService.register(createUserDto);
-    // Auto login after registration
-    await this.authService.login(user as UserDocument, undefined, response);
+    // No longer auto login after registration as email verification is required
     return user;
+  }
+
+  @Get('verify-email')
+  async verifyEmail(
+    @Query('token') token: string,
+  ): Promise<{ success: boolean; message: string }> {
+    try {
+      await this.authService.verifyEmail(token);
+      return {
+        success: true,
+        message: 'Email successfully verified. You can now log in.',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message || 'Email verification failed',
+      };
+    }
   }
 
   @UseGuards(LocalAuthGuard)
