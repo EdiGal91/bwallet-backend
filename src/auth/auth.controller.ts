@@ -55,12 +55,19 @@ export class AuthController {
   @Get('verify-email')
   async verifyEmail(
     @Query('token') token: string,
-  ): Promise<{ success: boolean; message: string }> {
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<{ success: boolean; message: string; user?: User }> {
     try {
-      await this.authService.verifyEmail(token);
+      const { user, accessToken, refreshToken } =
+        await this.authService.verifyEmail(token);
+
+      // Set auth cookies
+      this.setTokenCookies(response, accessToken, refreshToken);
+
       return {
         success: true,
-        message: 'Email successfully verified. You can now log in.',
+        message: 'Email successfully verified. You are now logged in.',
+        user,
       };
     } catch (error) {
       return {
@@ -68,6 +75,30 @@ export class AuthController {
         message: error.message || 'Email verification failed',
       };
     }
+  }
+
+  // Helper method to set cookies in the controller
+  private setTokenCookies(
+    response: Response,
+    accessToken: string,
+    refreshToken: string,
+  ): void {
+    // Set access token as HTTP-only cookie
+    response.cookie('access_token', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 15 * 60 * 1000, // 15 minutes in milliseconds
+    });
+
+    // Set refresh token as HTTP-only cookie
+    response.cookie('refresh_token', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/api/v1/auth/refresh', // Only sent to refresh endpoint
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
+    });
   }
 
   @UseGuards(LocalAuthGuard)

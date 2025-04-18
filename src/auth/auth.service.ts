@@ -67,7 +67,10 @@ export class AuthService {
     return user;
   }
 
-  async verifyEmail(token: string): Promise<User> {
+  async verifyEmail(
+    token: string,
+  ): Promise<{ user: User; accessToken: string; refreshToken: string }> {
+    // Verify the email and get the user
     const user = await this.verificationService.verifyEmail(token);
 
     // Send welcome notification after successful verification
@@ -76,7 +79,23 @@ export class AuthService {
       user.email,
     );
 
-    return user;
+    // Generate tokens for automatic login
+    const payload: JwtPayload = {
+      email: user.email,
+      sub: (user as UserDocument).id,
+    };
+
+    const accessToken = await this.generateAccessToken(payload);
+    const refreshToken = await this.generateRefreshToken(payload);
+
+    // Create session
+    await this.sessionService.createSession(
+      (user as UserDocument).id,
+      refreshToken,
+      7 * 24 * 60 * 60, // 7 days in seconds
+    );
+
+    return { user, accessToken, refreshToken };
   }
 
   async login(user: UserDocument, request?: Request, response?: Response) {
