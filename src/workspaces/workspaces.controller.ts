@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Param,
+  Patch,
   Post,
   Req,
   UseGuards,
@@ -138,5 +139,15 @@ export class WorkspacesController {
       { userId: memberId },
       userId,
     );
+  }
+
+  @Patch(':id')
+  async update(
+    @Param('id') id: string,
+    @Body('name') name: string,
+    @Req() req: RequestWithUser,
+  ) {
+    const userId = req.user.userId;
+    return this.workspacesService.update(id, name, userId);
   }
 }

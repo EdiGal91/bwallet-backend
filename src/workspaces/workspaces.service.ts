@@ -103,4 +103,20 @@ export class WorkspacesService {
 
     return this.findOne(workspaceId, ownerId);
   }
+
+  async update(id: string, name: string, userId: string): Promise<Workspace> {
+    const workspace = await this.workspaceModel.findOneAndUpdate(
+      { _id: id, owner: userId },
+      { name },
+      { new: true },
+    );
+
+    if (!workspace) {
+      throw new NotFoundException(
+        `Workspace not found or you don't have permission to update it`,
+      );
+    }
+
+    return workspace;
+  }
 }
