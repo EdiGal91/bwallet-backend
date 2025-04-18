@@ -69,7 +69,8 @@ export class AuthService {
 
   async verifyEmail(
     token: string,
-  ): Promise<{ user: User; accessToken: string; refreshToken: string }> {
+    response?: Response,
+  ): Promise<{ user: User }> {
     // Verify the email and get the user
     const user = await this.verificationService.verifyEmail(token);
 
@@ -95,7 +96,13 @@ export class AuthService {
       7 * 24 * 60 * 60, // 7 days in seconds
     );
 
-    return { user, accessToken, refreshToken };
+    // Set cookies if response object is provided
+    if (response) {
+      this.setTokenCookies(response, accessToken, refreshToken);
+    }
+
+    // Return user without exposing the tokens
+    return { user };
   }
 
   async login(user: UserDocument, request?: Request, response?: Response) {
@@ -128,11 +135,8 @@ export class AuthService {
       this.setTokenCookies(response, accessToken, refreshToken);
     }
 
-    return {
-      accessToken,
-      refreshToken,
-      user,
-    };
+    // Return user data only, without exposing tokens
+    return { user };
   }
 
   async refreshTokens(
@@ -247,5 +251,9 @@ export class AuthService {
       path: '/api/v1/auth/refresh',
       maxAge: 0,
     });
+  }
+
+  async getCurrentUser(userId: string): Promise<User> {
+    return this.usersService.findById(userId);
   }
 }

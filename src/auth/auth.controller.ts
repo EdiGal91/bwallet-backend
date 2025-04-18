@@ -43,10 +43,7 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
-  async register(
-    @Body() createUserDto: CreateUserDto,
-    @Res({ passthrough: true }) response: Response,
-  ): Promise<User> {
+  async register(@Body() createUserDto: CreateUserDto): Promise<User> {
     const user = await this.authService.register(createUserDto);
     // No longer auto login after registration as email verification is required
     return user;
@@ -58,47 +55,19 @@ export class AuthController {
     @Res({ passthrough: true }) response: Response,
   ): Promise<{ success: boolean; message: string; user?: User }> {
     try {
-      const { user, accessToken, refreshToken } =
-        await this.authService.verifyEmail(token);
-
-      // Set auth cookies
-      this.setTokenCookies(response, accessToken, refreshToken);
+      const { user } = await this.authService.verifyEmail(token, response);
 
       return {
         success: true,
         message: 'Email successfully verified. You are now logged in.',
         user,
       };
-    } catch (error) {
+    } catch (error: any) {
       return {
         success: false,
-        message: error.message || 'Email verification failed',
+        message: error?.message || 'Email verification failed',
       };
     }
-  }
-
-  // Helper method to set cookies in the controller
-  private setTokenCookies(
-    response: Response,
-    accessToken: string,
-    refreshToken: string,
-  ): void {
-    // Set access token as HTTP-only cookie
-    response.cookie('access_token', accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 15 * 60 * 1000, // 15 minutes in milliseconds
-    });
-
-    // Set refresh token as HTTP-only cookie
-    response.cookie('refresh_token', refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      path: '/api/v1/auth/refresh', // Only sent to refresh endpoint
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in milliseconds
-    });
   }
 
   @UseGuards(LocalAuthGuard)
@@ -137,5 +106,15 @@ export class AuthController {
     @Res({ passthrough: true }) response: Response,
   ) {
     return this.authService.logout(req.user.userId, response);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('me')
+  @HttpCode(HttpStatus.OK)
+  async getCurrentUser(
+    @Req() req: RequestWithJwtUser,
+  ): Promise<{ user: User }> {
+    const user = await this.authService.getCurrentUser(req.user.userId);
+    return { user };
   }
 }
