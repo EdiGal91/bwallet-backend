@@ -2,6 +2,8 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -12,14 +14,13 @@ import {
 import { WorkspacesService } from '../workspaces/workspaces.service';
 import { UsersService } from '../users/users.service';
 import { AddWorkspaceMemberDto } from './dto/add-workspace-member.dto';
-import { User } from '../users/schemas/user.schema';
-import { Workspace } from '../workspaces/schemas/workspace.schema';
 
 @Injectable()
 export class WorkspaceMembersService {
   constructor(
     @InjectModel(WorkspaceMember.name)
     private workspaceMemberModel: Model<WorkspaceMemberDocument>,
+    @Inject(forwardRef(() => WorkspacesService))
     private workspacesService: WorkspacesService,
     private usersService: UsersService,
   ) {}
@@ -241,5 +242,16 @@ export class WorkspaceMembersService {
     }
 
     return migratedCount;
+  }
+
+  /**
+   * Remove all members from a workspace when deleting the workspace
+   */
+  async removeAllMembersByWorkspace(workspaceId: string): Promise<number> {
+    const result = await this.workspaceMemberModel.deleteMany({
+      workspace: workspaceId,
+    });
+
+    return result.deletedCount;
   }
 }

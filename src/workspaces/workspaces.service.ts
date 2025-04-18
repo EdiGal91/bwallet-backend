@@ -1,15 +1,23 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  Inject,
+  forwardRef,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Workspace, WorkspaceDocument } from './schemas/workspace.schema';
 import { CreateWorkspaceDto } from './dto/create-workspace.dto';
 import { User } from '../users/schemas/user.schema';
+import { WorkspaceMembersService } from '../workspace-members/workspace-members.service';
 
 @Injectable()
 export class WorkspacesService {
   constructor(
     @InjectModel(Workspace.name)
     private workspaceModel: Model<WorkspaceDocument>,
+    @Inject(forwardRef(() => WorkspaceMembersService))
+    private workspaceMembersService: WorkspaceMembersService,
   ) {}
 
   async create(
@@ -118,5 +126,40 @@ export class WorkspacesService {
     }
 
     return workspace;
+  }
+
+  async remove(
+    id: string,
+    userId: string,
+  ): Promise<{ deleted: boolean; membersRemoved: number }> {
+    // First check if the workspace exists and the user is the owner
+    const workspace = await this.workspaceModel.findOne({
+      _id: id,
+      owner: userId,
+    });
+
+    if (!workspace) {
+      throw new NotFoundException(
+        `Workspace not found or you don't have permission to delete it`,
+      );
+    }
+
+    // Remove all members associated with this workspace
+    const membersRemoved =
+      await this.workspaceMembersService.removeAllMembersByWorkspace(id);
+
+    // Now delete the workspace
+    const result = await this.workspaceModel.deleteOne({
+      _id: id,
+      owner: userId,
+    });
+
+    if (result.deletedCount === 0) {
+      throw new NotFoundException(
+        `Workspace not found or you don't have permission to delete it`,
+      );
+    }
+
+    return { deleted: true, membersRemoved };
   }
 }

@@ -9,6 +9,7 @@ import {
   UseGuards,
   forwardRef,
   Inject,
+  Delete,
 } from '@nestjs/common';
 import { WorkspacesService } from './workspaces.service';
 import { CreateWorkspaceDto } from './dto/create-workspace.dto';
@@ -45,8 +46,10 @@ export class WorkspacesController {
 
     // Automatically add the creator as an admin member to the workspace
     try {
+      // Access the ID safely with string indexing and fallback
+      const workspaceId = workspace?.id || workspace?.['_id']?.toString() || '';
       await this.workspaceMembersService.addMember(
-        workspace['id'] || workspace._id.toString(),
+        workspaceId,
         { userId, role: 'admin' },
         userId,
       );
@@ -94,8 +97,12 @@ export class WorkspacesController {
     [...ownedWorkspaces, ...memberWorkspaces.filter(Boolean)].forEach(
       (workspace) => {
         if (workspace) {
-          const workspaceId = workspace['id'] || workspace._id.toString();
-          workspacesMap.set(workspaceId, workspace);
+          // Access the ID safely with a fallback
+          const workspaceId =
+            workspace?.id || workspace?.['_id']?.toString() || '';
+          if (workspaceId) {
+            workspacesMap.set(workspaceId, workspace);
+          }
         }
       },
     );
@@ -148,6 +155,14 @@ export class WorkspacesController {
     @Req() req: RequestWithUser,
   ) {
     const userId = req.user.userId;
-    return this.workspacesService.update(id, name, userId);
+    const updated = await this.workspacesService.update(id, name, userId);
+    return updated;
+  }
+
+  @Delete(':id')
+  async remove(@Param('id') id: string, @Req() req: RequestWithUser) {
+    const userId = req.user.userId;
+    const result = await this.workspacesService.remove(id, userId);
+    return result;
   }
 }

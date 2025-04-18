@@ -7,8 +7,9 @@ export type WorkspaceDocument = Workspace & Document;
 @Schema({
   timestamps: true,
   toJSON: {
-    transform: (doc, ret) => {
-      ret.id = ret._id;
+    virtuals: true,
+    transform: (_, ret) => {
+      ret.id = ret._id.toString();
       delete ret._id;
       delete ret.__v;
       return ret;
@@ -16,6 +17,8 @@ export type WorkspaceDocument = Workspace & Document;
   },
 })
 export class Workspace {
+  id?: string; // Add virtual id property to match MongoDB behavior
+
   @Prop({ required: true })
   name: string;
 
@@ -29,6 +32,12 @@ export class Workspace {
     deprecated: true,
   })
   members?: User[];
+
+  @Prop()
+  createdAt?: Date;
+
+  @Prop()
+  updatedAt?: Date;
 }
 
 export const WorkspaceSchema = SchemaFactory.createForClass(Workspace);
