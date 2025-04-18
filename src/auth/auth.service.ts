@@ -49,12 +49,10 @@ export class AuthService {
       (user as UserDocument).id,
     );
 
-    // Create verification link
-    const baseUrl = this.configService.get<string>('FRONTEND_URL');
-    const apiUrl =
-      this.configService.get<string>('API_URL') ||
-      'http://localhost:4000/api/v1';
-    const verificationLink = `${apiUrl}/auth/verify-email?token=${token}`;
+    // Create verification link that points to the frontend
+    const frontendUrl =
+      this.configService.get<string>('FRONTEND_URL') || 'http://localhost:5173';
+    const verificationLink = `${frontendUrl}/verify?token=${token}`;
 
     // Send verification notification
     await this.notificationsService.sendVerificationNotification(
