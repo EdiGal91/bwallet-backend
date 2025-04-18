@@ -16,11 +16,13 @@ import {
   VerificationToken,
   VerificationTokenSchema,
 } from './schemas/verification-token.schema';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
     UsersModule,
     PassportModule,
+    NotificationsModule,
     MongooseModule.forFeature([
       { name: Session.name, schema: SessionSchema },
       { name: VerificationToken.name, schema: VerificationTokenSchema },

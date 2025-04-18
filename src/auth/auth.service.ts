@@ -8,6 +8,7 @@ import { User, UserDocument } from '../users/schemas/user.schema';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
 import { SessionService } from './services/session.service';
 import { VerificationService } from './services/verification.service';
+import { NotificationsService } from '../notifications/services/notifications.service';
 
 @Injectable()
 export class AuthService {
@@ -17,6 +18,7 @@ export class AuthService {
     private configService: ConfigService,
     private sessionService: SessionService,
     private verificationService: VerificationService,
+    private notificationsService: NotificationsService,
   ) {}
 
   async validateUser(
@@ -47,17 +49,36 @@ export class AuthService {
       (user as UserDocument).id,
     );
 
-    // Here you would send an email with the verification link
-    // We'll just log it for demonstration purposes
-    console.log(
-      `Verification link: http://localhost:4000/api/v1/auth/verify-email?token=${token}`,
+    // Create verification link
+    const baseUrl = this.configService.get<string>('FRONTEND_URL');
+    const apiUrl =
+      this.configService.get<string>('API_URL') ||
+      'http://localhost:4000/api/v1';
+    const verificationLink = `${apiUrl}/auth/verify-email?token=${token}`;
+
+    // Send verification notification
+    await this.notificationsService.sendVerificationNotification(
+      (user as UserDocument).id,
+      user.email,
+      verificationLink,
     );
+
+    // Log for development/debugging
+    console.log(`Verification link: ${verificationLink}`);
 
     return user;
   }
 
   async verifyEmail(token: string): Promise<User> {
-    return this.verificationService.verifyEmail(token);
+    const user = await this.verificationService.verifyEmail(token);
+
+    // Send welcome notification after successful verification
+    await this.notificationsService.sendWelcomeNotification(
+      (user as UserDocument).id,
+      user.email,
+    );
+
+    return user;
   }
 
   async login(user: UserDocument, request?: Request, response?: Response) {
