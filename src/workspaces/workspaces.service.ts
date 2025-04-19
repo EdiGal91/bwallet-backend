@@ -3,12 +3,12 @@ import {
   NotFoundException,
   Inject,
   forwardRef,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Workspace, WorkspaceDocument } from './schemas/workspace.schema';
 import { CreateWorkspaceDto } from './dto/create-workspace.dto';
-import { User } from '../users/schemas/user.schema';
 import { WorkspaceMembersService } from '../workspace-members/workspace-members.service';
 
 @Injectable()
@@ -22,45 +22,44 @@ export class WorkspacesService {
 
   async create(
     createWorkspaceDto: CreateWorkspaceDto,
-    user: User,
+    // Parameter needed for signature compatibility with controller
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _userId: string,
   ): Promise<Workspace> {
     const workspace = new this.workspaceModel({
       ...createWorkspaceDto,
-      owner: user,
-      // Don't add members here anymore, they'll be added to the WorkspaceMember collection
     });
     return workspace.save();
   }
 
+  /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
   async findAll(userId: string): Promise<Workspace[]> {
-    // Only find workspaces where the user is the owner
-    // Members will be handled by the WorkspaceMembersService
+    // Get workspaces where user has owner role through workspace-members
+    const ownerWorkspaceIds =
+      await this.workspaceMembersService.findWorkspacesByUserAndRole(
+        userId,
+        'owner',
+      );
+
+    // Find all these workspaces
+    if (!ownerWorkspaceIds.length) {
+      return [];
+    }
+
     return this.workspaceModel
       .find({
-        owner: userId,
+        _id: { $in: ownerWorkspaceIds },
       })
-      .populate('owner', 'email')
       .exec();
   }
+  /* eslint-enable */
 
-  async findOne(
-    id: string,
-    userId: string,
-    isOwnerOnly = false,
-  ): Promise<Workspace> {
-    // If isOwnerOnly is true, only find if user is owner
-    // Otherwise, membership validation would happen at the controller level
-    const query = isOwnerOnly ? { _id: id, owner: userId } : { _id: id };
-
-    const workspace = await this.workspaceModel
-      .findOne(query)
-      .populate('owner', 'email')
-      .exec();
+  async findOne(id: string): Promise<Workspace> {
+    // Find the workspace by ID
+    const workspace = await this.workspaceModel.findById(id).exec();
 
     if (!workspace) {
-      throw new NotFoundException(
-        `Workspace with ID ${id} not found or you don't have access to it`,
-      );
+      throw new NotFoundException(`Workspace with ID ${id} not found`);
     }
 
     return workspace;
@@ -79,6 +78,38 @@ export class WorkspacesService {
     return this.workspaceModel.find().exec();
   }
 
+  /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
+  // Check if a user has specified role or higher privileges in a workspace
+  async checkUserRole(
+    workspaceId: string,
+    userId: string,
+    requiredRole: string,
+  ): Promise<boolean> {
+    try {
+      const member =
+        await this.workspaceMembersService.findMemberByWorkspaceAndUser(
+          workspaceId,
+          userId,
+        );
+
+      if (!member) {
+        return false;
+      }
+
+      // Check role hierarchy
+      const roles = ['owner', 'admin', 'member', 'viewer'];
+      const userRoleIndex = roles.indexOf(member.role);
+      const requiredRoleIndex = roles.indexOf(requiredRole);
+
+      // Lower index means higher privilege
+      return userRoleIndex <= requiredRoleIndex;
+    } catch (error: unknown) {
+      // Silently return false on errors
+      return false;
+    }
+  }
+  /* eslint-enable */
+
   // Legacy method - kept for reference but should not be used anymore
   // Use WorkspaceMembersService.addMember instead
   async addMember(
@@ -86,17 +117,14 @@ export class WorkspacesService {
     ownerId: string,
     memberId: string,
   ): Promise<Workspace> {
-    // Find workspace and make sure the requester is the owner
-    const workspace = await this.workspaceModel.findOne({
-      _id: workspaceId,
-      owner: ownerId,
-    });
+    // Check if user is owner through workspace-members
+    const isOwner = await this.checkUserRole(workspaceId, ownerId, 'owner');
 
-    if (!workspace) {
-      throw new NotFoundException(
-        'Workspace not found or you are not the owner',
-      );
+    if (!isOwner) {
+      throw new UnauthorizedException('Only workspace owners can add members');
     }
+
+    const workspace = await this.findOne(workspaceId);
 
     // Initialize members array if it doesn't exist
     if (!workspace.members) {
@@ -106,23 +134,36 @@ export class WorkspacesService {
     // Add member if they aren't already a member
     if (!workspace.members.includes(memberId as any)) {
       workspace.members.push(memberId as any);
-      await workspace.save();
+
+      // Use the model instead of the document for save
+      await this.workspaceModel.findByIdAndUpdate(
+        workspaceId,
+        { members: workspace.members },
+        { new: true },
+      );
     }
 
-    return this.findOne(workspaceId, ownerId);
+    return this.findOne(workspaceId);
   }
 
   async update(id: string, name: string, userId: string): Promise<Workspace> {
+    // Check if user is owner or admin
+    const hasPermission = await this.checkUserRole(id, userId, 'admin');
+
+    if (!hasPermission) {
+      throw new UnauthorizedException(
+        'Only workspace owners and admins can update workspace details',
+      );
+    }
+
     const workspace = await this.workspaceModel.findOneAndUpdate(
-      { _id: id, owner: userId },
+      { _id: id },
       { name },
       { new: true },
     );
 
     if (!workspace) {
-      throw new NotFoundException(
-        `Workspace not found or you don't have permission to update it`,
-      );
+      throw new NotFoundException(`Workspace with ID ${id} not found`);
     }
 
     return workspace;
@@ -132,16 +173,20 @@ export class WorkspacesService {
     id: string,
     userId: string,
   ): Promise<{ deleted: boolean; membersRemoved: number }> {
-    // First check if the workspace exists and the user is the owner
-    const workspace = await this.workspaceModel.findOne({
-      _id: id,
-      owner: userId,
-    });
+    // Check if user is owner
+    const isOwner = await this.checkUserRole(id, userId, 'owner');
+
+    if (!isOwner) {
+      throw new UnauthorizedException(
+        'Only workspace owners can delete workspaces',
+      );
+    }
+
+    // First check if the workspace exists
+    const workspace = await this.workspaceModel.findById(id);
 
     if (!workspace) {
-      throw new NotFoundException(
-        `Workspace not found or you don't have permission to delete it`,
-      );
+      throw new NotFoundException(`Workspace with ID ${id} not found`);
     }
 
     // Remove all members associated with this workspace
@@ -149,15 +194,10 @@ export class WorkspacesService {
       await this.workspaceMembersService.removeAllMembersByWorkspace(id);
 
     // Now delete the workspace
-    const result = await this.workspaceModel.deleteOne({
-      _id: id,
-      owner: userId,
-    });
+    const result = await this.workspaceModel.deleteOne({ _id: id });
 
     if (result.deletedCount === 0) {
-      throw new NotFoundException(
-        `Workspace not found or you don't have permission to delete it`,
-      );
+      throw new NotFoundException(`Workspace with ID ${id} not found`);
     }
 
     return { deleted: true, membersRemoved };

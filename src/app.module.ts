@@ -7,6 +7,7 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { WorkspacesModule } from './workspaces/workspaces.module';
 import { WorkspaceMembersModule } from './workspace-members/workspace-members.module';
+import { WalletsModule } from './wallets/wallets.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { WorkspaceMembersModule } from './workspace-members/workspace-members.mo
     UsersModule,
     WorkspacesModule,
     WorkspaceMembersModule,
+    WalletsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -61,9 +61,6 @@ export class AuthService {
       verificationLink,
     );
 
-    // Log for development/debugging
-    console.log(`Verification link: ${verificationLink}`);
-
     return user;
   }
 

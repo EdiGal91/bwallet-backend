@@ -10,12 +10,14 @@ import {
   forwardRef,
   Inject,
   Delete,
+  NotFoundException,
 } from '@nestjs/common';
 import { WorkspacesService } from './workspaces.service';
 import { CreateWorkspaceDto } from './dto/create-workspace.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Request } from 'express';
 import { WorkspaceMembersService } from '../workspace-members/workspace-members.service';
+import { Workspace } from './schemas/workspace.schema';
 
 interface RequestWithUser extends Request {
   user: {
@@ -39,23 +41,39 @@ export class WorkspacesController {
     @Req() req: RequestWithUser,
   ) {
     const userId = req.user.userId;
+
+    // Create the workspace first
     const workspace = await this.workspacesService.create(
       createWorkspaceDto,
-      userId as any,
+      userId,
     );
 
-    // Automatically add the creator as an admin member to the workspace
+    // Get the workspace ID safely
+    const workspaceId = workspace?.id || workspace?.['_id']?.toString();
+
+    if (!workspaceId) {
+      throw new Error('Failed to get workspace ID after creation');
+    }
+
+    // Add the creator as an owner member to the workspace
     try {
-      // Access the ID safely with string indexing and fallback
-      const workspaceId = workspace?.id || workspace?.['_id']?.toString() || '';
       await this.workspaceMembersService.addMember(
         workspaceId,
-        { userId, role: 'admin' },
+        { userId, role: 'owner' },
         userId,
       );
     } catch (error) {
-      console.error('Error adding creator as member:', error);
-      // We'll continue even if this fails, as the workspace was created successfully
+      console.error('Error adding creator as owner:', error);
+      // Instead of silently continuing, delete the workspace if we can't add the owner
+      try {
+        await this.workspacesService.remove(workspaceId, userId);
+      } catch (deleteError) {
+        console.error(
+          'Error removing workspace after failed owner assignment:',
+          deleteError,
+        );
+      }
+      throw new Error('Failed to add creator as workspace owner');
     }
 
     return workspace;
@@ -65,7 +83,7 @@ export class WorkspacesController {
   async findAll(@Req() req: RequestWithUser) {
     const userId = req.user.userId;
 
-    // Get all workspaces where user is owner
+    // Get all workspaces where user is owner (using role-based approach)
     const ownedWorkspaces = await this.workspacesService.findAll(userId);
 
     // Get IDs of all workspaces where user is a member
@@ -74,6 +92,9 @@ export class WorkspacesController {
 
     // If user is not a member of any other workspaces, just return owned ones
     if (!memberWorkspaceIds.length) {
+      console.log(
+        `User is not a member of any workspaces, returning ${ownedWorkspaces.length} owned workspaces`,
+      );
       return ownedWorkspaces;
     }
 
@@ -81,8 +102,9 @@ export class WorkspacesController {
     const memberWorkspaces = await Promise.all(
       memberWorkspaceIds.map(async (id) => {
         try {
-          // User is a verified member, so we can fetch the workspace without owner check
-          return await this.workspacesService.findOne(id, userId, false);
+          // User is a verified member, so we can fetch the workspace
+          const workspace = await this.workspacesService.findOne(id);
+          return workspace;
         } catch (error) {
           console.error(`Error fetching workspace ${id}:`, error);
           return null;
@@ -107,29 +129,28 @@ export class WorkspacesController {
       },
     );
 
-    return Array.from(workspacesMap.values());
+    const result = Array.from(workspacesMap.values()) as Workspace[];
+    return result;
   }
 
   @Get(':id')
   async findOne(@Param('id') id: string, @Req() req: RequestWithUser) {
     const userId = req.user.userId;
 
-    try {
-      // First try to get the workspace as an owner
-      return await this.workspacesService.findOne(id, userId, true);
-    } catch (error) {
-      // If not the owner, check if they're a member
-      const memberWorkspaceIds =
-        await this.workspaceMembersService.findWorkspacesByUser(userId);
+    // First get the workspace
+    const workspace = await this.workspacesService.findOne(id);
 
-      if (memberWorkspaceIds.includes(id)) {
-        // User is a member, so we can fetch the workspace without owner check
-        return await this.workspacesService.findOne(id, userId, false);
-      }
+    // Check if user is authorized to access this workspace
+    const memberWorkspaceIds =
+      await this.workspaceMembersService.findWorkspacesByUser(userId);
 
-      // If not an owner or member, rethrow the original error
-      throw error;
+    if (!memberWorkspaceIds.includes(id)) {
+      throw new NotFoundException(
+        `Workspace not found or you don't have access to it`,
+      );
     }
+
+    return workspace;
   }
 
   // This endpoint is deprecated - use workspace-members endpoints instead

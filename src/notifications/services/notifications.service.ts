@@ -49,7 +49,6 @@ export class NotificationsService {
     if (channels.includes('email')) {
       // We'll implement this properly later
       await Promise.resolve();
-      console.log(`Sending welcome notification to ${email}`);
     }
   }
 
@@ -68,9 +67,6 @@ export class NotificationsService {
     if (channels.includes('email')) {
       // We'll implement this properly later
       await Promise.resolve();
-      console.log(
-        `Sending password reset notification to ${email} with link ${resetLink}`,
-      );
     }
   }
 }

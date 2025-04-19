@@ -26,6 +26,62 @@ export class WorkspaceMembersService {
   ) {}
 
   /**
+   * Find all workspaces where a user has a specific role
+   */
+  async findWorkspacesByUserAndRole(
+    userId: string,
+    role: string,
+  ): Promise<string[]> {
+    const memberships = await this.workspaceMemberModel
+      .find({ user: userId, role })
+      .lean()
+      .exec();
+
+    return memberships
+      .map((membership) => {
+        const workspaceId = membership.workspace;
+        if (!workspaceId) return '';
+        return workspaceId.toString ? workspaceId.toString() : `${workspaceId}`;
+      })
+      .filter(Boolean);
+  }
+
+  /**
+   * Find a member by workspace and user
+   */
+  async findMemberByWorkspaceAndUser(
+    workspaceId: string,
+    userId: string,
+  ): Promise<WorkspaceMember | null> {
+    return this.workspaceMemberModel
+      .findOne({ workspace: workspaceId, user: userId })
+      .exec();
+  }
+
+  /**
+   * Check if user has required permission in workspace
+   */
+  async checkUserPermission(
+    workspaceId: string,
+    userId: string,
+    requiredRole: string,
+  ): Promise<boolean> {
+    const member = await this.findMemberByWorkspaceAndUser(workspaceId, userId);
+
+    if (!member) {
+      return false;
+    }
+
+    // Check role hierarchy
+    const roles = ['owner', 'admin', 'member', 'viewer'];
+    const userRoleIndex = roles.indexOf(member.role);
+    const requiredRoleIndex = roles.indexOf(requiredRole);
+
+    // Lower index means higher privilege
+    return userRoleIndex <= requiredRoleIndex;
+  }
+
+  /**
    * Add a user as a member to a workspace
    */
   async addMember(
@@ -33,15 +89,39 @@ export class WorkspaceMembersService {
     addMemberDto: AddWorkspaceMemberDto,
     requesterId: string,
   ): Promise<WorkspaceMember> {
-    // Verify the workspace exists and requesterId is the owner
+    // Verify the workspace exists
     const workspace = await this.workspacesService.findById(workspaceId);
     if (!workspace) {
       throw new NotFoundException(`Workspace with ID ${workspaceId} not found`);
     }
 
-    // Check if requesterId is the owner of the workspace
-    if (workspace.owner.toString() !== requesterId) {
-      throw new NotFoundException('Only the workspace owner can add members');
+    // Check if this is the first member being added (likely the creator/owner)
+    const existingMembers = await this.findMembersByWorkspace(workspaceId);
+    const isFirstMember = existingMembers.length === 0;
+
+    // If this is not the first member, check permissions
+    if (!isFirstMember) {
+      // Check if requester has owner or admin role
+      const hasPermission = await this.checkUserPermission(
+        workspaceId,
+        requesterId,
+        'admin',
+      );
+      if (!hasPermission) {
+        throw new NotFoundException(
+          'Only workspace owners and admins can add members',
+        );
+      }
+    } else {
+      // For the first member, we only allow them to be added as owner and they must be the requester
+      if (
+        addMemberDto.role !== 'owner' ||
+        addMemberDto.userId !== requesterId
+      ) {
+        throw new NotFoundException(
+          'The first member added must be the creator as owner',
+        );
+      }
     }
 
     // Verify the user exists
@@ -91,10 +171,16 @@ export class WorkspaceMembersService {
   async findWorkspacesByUser(userId: string): Promise<string[]> {
     const memberships = await this.workspaceMemberModel
       .find({ user: userId })
-      .select('workspace')
+      .lean()
       .exec();
 
-    return memberships.map((membership) => membership.workspace.toString());
+    return memberships
+      .map((membership) => {
+        const workspaceId = membership.workspace;
+        if (!workspaceId) return '';
+        return workspaceId.toString ? workspaceId.toString() : `${workspaceId}`;
+      })
+      .filter(Boolean);
   }
 
   /**
@@ -105,17 +191,41 @@ export class WorkspaceMembersService {
     userId: string,
     requesterId: string,
   ): Promise<void> {
-    // Verify the workspace exists and requesterId is the owner
+    // Verify the workspace exists
     const workspace = await this.workspacesService.findById(workspaceId);
     if (!workspace) {
       throw new NotFoundException(`Workspace with ID ${workspaceId} not found`);
     }
 
-    // Check if requesterId is the owner of the workspace
-    if (workspace.owner.toString() !== requesterId) {
+    // Check if requester has owner or admin role
+    const hasPermission = await this.checkUserPermission(
+      workspaceId,
+      requesterId,
+      'admin',
+    );
+    if (!hasPermission) {
       throw new NotFoundException(
-        'Only the workspace owner can remove members',
+        'Only workspace owners and admins can remove members',
       );
+    }
+
+    // Get the role of the member being removed
+    const memberToRemove = await this.findMemberByWorkspaceAndUser(
+      workspaceId,
+      userId,
+    );
+    if (memberToRemove && memberToRemove.role === 'owner') {
+      // Check if requester is also an owner
+      const requesterIsOwner = await this.checkUserPermission(
+        workspaceId,
+        requesterId,
+        'owner',
+      );
+      if (!requesterIsOwner) {
+        throw new NotFoundException(
+          'Only workspace owners can remove other owners',
+        );
+      }
     }
 
     // Find and delete the membership
@@ -138,16 +248,21 @@ export class WorkspaceMembersService {
     role: string,
     requesterId: string,
   ): Promise<WorkspaceMember> {
-    // Verify the workspace exists and requesterId is the owner
+    // Verify the workspace exists
     const workspace = await this.workspacesService.findById(workspaceId);
     if (!workspace) {
       throw new NotFoundException(`Workspace with ID ${workspaceId} not found`);
     }
 
-    // Check if requesterId is the owner of the workspace
-    if (workspace.owner.toString() !== requesterId) {
+    // Check if requester has owner role (only owners can change roles)
+    const hasPermission = await this.checkUserPermission(
+      workspaceId,
+      requesterId,
+      'owner',
+    );
+    if (!hasPermission) {
       throw new NotFoundException(
-        'Only the workspace owner can update member roles',
+        'Only workspace owners can update member roles',
       );
     }
 
@@ -182,62 +297,39 @@ export class WorkspaceMembersService {
         continue;
       }
 
+      // Get the workspace ID safely
+      const workspaceId = workspace.id || '';
+      if (!workspaceId) {
+        console.error('Workspace has no valid ID');
+        continue;
+      }
+
       // Add each member to the new collection
-      for (const memberId of workspace.members) {
+      for (const member of workspace.members) {
         try {
-          // Skip if member is also the owner (they'll be added separately)
-          if (memberId.toString() === workspace.owner.toString()) {
-            continue;
-          }
+          // Convert member to string safely
+          const userId = member ? `${member}` : '';
+          if (!userId) continue;
 
           // Check if already migrated
           const existingMembership = await this.workspaceMemberModel.findOne({
-            workspace: workspace.id,
-            user: memberId,
+            workspace: workspaceId,
+            user: userId,
           });
 
           if (!existingMembership) {
             const newMembership = new this.workspaceMemberModel({
-              workspace: workspace.id,
-              user: memberId,
+              workspace: workspaceId,
+              user: userId,
               role: 'member',
-              joinedAt: workspace.createdAt, // Use workspace creation date as a fallback
+              joinedAt: workspace.createdAt || new Date(), // Use workspace creation date as a fallback
             });
             await newMembership.save();
             migratedCount++;
           }
         } catch (error) {
-          console.error(
-            `Error migrating member ${memberId} for workspace ${workspace.id}:`,
-            error,
-          );
+          console.error(`Error migrating member for workspace ${workspaceId}`);
         }
-      }
-
-      // Always ensure the owner is a member with admin privileges
-      try {
-        const existingOwnerMembership = await this.workspaceMemberModel.findOne(
-          {
-            workspace: workspace.id,
-            user: workspace.owner,
-          },
-        );
-
-        if (!existingOwnerMembership) {
-          const ownerMembership = new this.workspaceMemberModel({
-            workspace: workspace.id,
-            user: workspace.owner,
-            role: 'admin',
-            joinedAt: workspace.createdAt,
-          });
-          await ownerMembership.save();
-          migratedCount++;
-        }
-      } catch (error) {
-        console.error(
-          `Error migrating owner for workspace ${workspace.id}:`,
-          error,
-        );
       }
     }
 

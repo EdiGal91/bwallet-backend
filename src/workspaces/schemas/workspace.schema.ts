@@ -8,12 +8,16 @@ export type WorkspaceDocument = Workspace & Document;
   timestamps: true,
   toJSON: {
     virtuals: true,
+    /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
     transform: (_, ret) => {
-      ret.id = ret._id.toString();
+      if (ret._id) {
+        ret.id = ret._id.toString();
+      }
       delete ret._id;
       delete ret.__v;
       return ret;
     },
+    /* eslint-enable */
   },
 })
 export class Workspace {
@@ -21,9 +25,6 @@ export class Workspace {
 
   @Prop({ required: true })
   name: string;
-
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
-  owner: User;
 
   // Keep the members array for backward compatibility during migration
   // This will be removed after migration is complete

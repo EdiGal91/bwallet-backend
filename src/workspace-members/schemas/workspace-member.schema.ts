@@ -8,12 +8,14 @@ export type WorkspaceMemberDocument = WorkspaceMember & Document;
 @Schema({
   timestamps: true,
   toJSON: {
+    /* eslint-disable @typescript-eslint/no-unsafe-assignment */
     transform: (doc, ret) => {
       ret.id = ret._id;
       delete ret._id;
       delete ret.__v;
       return ret;
     },
+    /* eslint-enable */
   },
 })
 export class WorkspaceMember {
@@ -29,7 +31,7 @@ export class WorkspaceMember {
 
   @Prop({
     type: String,
-    enum: ['admin', 'member', 'viewer'],
+    enum: ['owner', 'admin', 'member', 'viewer'],
     default: 'member',
   })
   role: string;
