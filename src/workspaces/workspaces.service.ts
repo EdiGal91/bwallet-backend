@@ -32,7 +32,6 @@ export class WorkspacesService {
     return workspace.save();
   }
 
-  /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
   async findAll(userId: string): Promise<Workspace[]> {
     // Get workspaces where user has owner role through workspace-members
     const ownerWorkspaceIds =
