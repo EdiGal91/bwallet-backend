@@ -17,7 +17,7 @@ import { UpdateWalletNameDto } from './dto/update-wallet-name.dto';
 
 interface RequestWithUser extends Request {
   user: {
-    _id: string;
+    userId: string;
     email: string;
   };
 }
@@ -32,7 +32,10 @@ export class WalletsController {
     @Body() createWalletDto: CreateWalletDto,
     @Req() req: RequestWithUser,
   ) {
-    return this.walletsService.createMainWallet(createWalletDto, req.user._id);
+    return this.walletsService.createMainWallet(
+      createWalletDto,
+      req.user.userId,
+    );
   }
 
   @Get('workspace/:workspaceId')
@@ -42,13 +45,13 @@ export class WalletsController {
   ) {
     return this.walletsService.findWalletsByWorkspace(
       workspaceId,
-      req.user._id,
+      req.user.userId,
     );
   }
 
   @Get(':id')
   async findWalletById(@Param('id') id: string, @Req() req: RequestWithUser) {
-    return this.walletsService.findWalletById(id, req.user._id);
+    return this.walletsService.findWalletById(id, req.user.userId);
   }
 
   @Put(':id/name')
@@ -60,7 +63,7 @@ export class WalletsController {
     return this.walletsService.updateWalletName(
       id,
       updateWalletNameDto.name,
-      req.user._id,
+      req.user.userId,
     );
   }
 }
