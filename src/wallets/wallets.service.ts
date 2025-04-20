@@ -91,7 +91,7 @@ export class WalletsService {
 
     // Check if user has access to the workspace using member service
     const memberWorkspaceIds =
-      await this.workspaceMembersService.findWorkspacesByUser(  );
+      await this.workspaceMembersService.findWorkspacesByUser(userId);
 
     if (!memberWorkspaceIds.includes(workspaceId)) {
       throw new UnauthorizedException(
