@@ -21,7 +21,7 @@ export class JwtRefreshStrategy extends PassportStrategy(
         ExtractJwt.fromAuthHeaderAsBearerToken(),
         // Then check cookies
         (request: Request) => {
-          const token = request?.cookies?.refresh_token;
+          const token = request.cookies.refresh_token as string | undefined;
           if (!token) {
             return null;
           }
@@ -38,7 +38,7 @@ export class JwtRefreshStrategy extends PassportStrategy(
 
   async validate(req: Request, payload: JwtPayload) {
     // Get refresh token from either cookie or auth header
-    let refreshToken = req.cookies?.refresh_token;
+    let refreshToken = req.cookies.refresh_token as string | undefined;
 
     if (!refreshToken) {
       const authHeader = req.headers.authorization;
