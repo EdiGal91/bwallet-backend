@@ -11,7 +11,6 @@ export interface GeneratedWallet {
   derivationPath?: string;
   extendedKey?: string;
   walletType: WalletType;
-  hdIndex?: number;
 }
 
 @Injectable()
@@ -47,51 +46,6 @@ export class WalletGeneratorService {
     // For Bitcoin wallets (placeholder for future implementation)
     if (blockchain === BlockchainType.BITCOIN) {
       throw new Error('Bitcoin wallet generation not yet implemented');
-    }
-
-    throw new Error(`Unsupported blockchain type: ${blockchain as string}`);
-  }
-
-  /**
-   * Generate a derived wallet from a mnemonic and index
-   */
-  generateDerivedWallet(
-    blockchain: BlockchainType,
-    mnemonic: string,
-    index: number,
-  ) {
-    this.logger.debug(
-      `Generating derived wallet for ${blockchain as string} with index ${index}`,
-    );
-
-    if (!bip39.validateMnemonic(mnemonic)) {
-      throw new Error('Invalid mnemonic provided');
-    }
-
-    // For Ethereum wallets
-    if (blockchain === BlockchainType.ETHEREUM) {
-      // Create HD wallet from mnemonic
-      const hdNode = ethers.HDNodeWallet.fromMnemonic(
-        ethers.Mnemonic.fromPhrase(mnemonic),
-      );
-
-      // Derive the path based on index (m/44'/60'/0'/0/index)
-      const derivedPath = `m/44'/60'/0'/0/${index}`;
-      const derivedWallet = hdNode.derivePath(derivedPath);
-
-      return {
-        address: derivedWallet.address,
-        privateKey: derivedWallet.privateKey,
-        derivationPath: derivedPath,
-        hdIndex: index,
-        publicKey: derivedWallet.publicKey,
-        extendedKey: derivedWallet.extendedKey,
-      };
-    }
-
-    // For Bitcoin wallets (placeholder for future implementation)
-    if (blockchain === BlockchainType.BITCOIN) {
-      throw new Error('Bitcoin derived wallet generation not yet implemented');
     }
 
     throw new Error(`Unsupported blockchain type: ${blockchain as string}`);

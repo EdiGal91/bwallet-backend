@@ -12,7 +12,6 @@ export enum BlockchainType {
 
 export enum WalletType {
   HD_MAIN = 'hd_main', // Main wallet (master)
-  HD_DERIVED = 'hd_derived', // Derived from the main wallet
 }
 
 @Schema({
@@ -89,12 +88,6 @@ export class Wallet {
 
   @Prop()
   derivationPath?: string;
-
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Wallet' })
-  parentWallet?: Wallet;
-
-  @Prop()
-  hdIndex?: number;
 
   @Prop({ default: 0 })
   balance: number;

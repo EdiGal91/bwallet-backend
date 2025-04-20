@@ -10,9 +10,7 @@ import { Wallet, WalletDocument, WalletType } from './schemas/wallet.schema';
 import { WalletGeneratorService } from './wallet-generator.service';
 import { WorkspacesService } from '../workspaces/workspaces.service';
 import { CreateWalletDto } from './dto/create-wallet.dto';
-import { CreateDerivedWalletDto } from './dto/create-derived-wallet.dto';
 import { WorkspaceMembersService } from '../workspace-members/workspace-members.service';
-import { UpdateWalletNameDto } from './dto/update-wallet-name.dto';
 
 @Injectable()
 export class WalletsService {
@@ -78,61 +76,6 @@ export class WalletsService {
   }
 
   /**
-   * Create a derived wallet from a parent wallet
-   */
-  async createDerivedWallet(
-    createDerivedWalletDto: CreateDerivedWalletDto,
-    userId: string,
-  ): Promise<Wallet> {
-    // First get the parent wallet with sensitive data (including mnemonic)
-    const parentWallet = await this.findWalletWithSensitiveData(
-      createDerivedWalletDto.parentWalletId,
-      userId,
-    );
-
-    if (parentWallet.walletType !== WalletType.HD_MAIN) {
-      throw new Error('Derived wallets can only be created from main wallets');
-    }
-
-    // Find the next available HD index
-    const walletId = parentWallet.id;
-    if (!walletId) {
-      throw new Error('Invalid parent wallet ID');
-    }
-    const nextIndex = await this.getNextHdIndex(walletId);
-
-    const mnemonic = parentWallet.mnemonic;
-    if (!mnemonic) {
-      throw new Error('Parent wallet mnemonic not found');
-    }
-
-    // Generate a derived wallet from the parent's mnemonic
-    const generatedWallet = this.walletGeneratorService.generateDerivedWallet(
-      parentWallet.blockchain,
-      mnemonic,
-      nextIndex,
-    );
-
-    // Create and save the derived wallet
-    const wallet = new this.walletModel({
-      name: createDerivedWalletDto.name,
-      blockchain: parentWallet.blockchain,
-      walletType: WalletType.HD_DERIVED,
-      workspace: parentWallet.workspace,
-      address: generatedWallet.address,
-      publicKey: generatedWallet.publicKey,
-      privateKey: generatedWallet.privateKey,
-      mnemonic: null, // Don't store mnemonic in derived wallets
-      derivationPath: generatedWallet.derivationPath,
-      parentWallet: parentWallet.id,
-      hdIndex: nextIndex,
-      balance: 0,
-    });
-
-    return wallet.save();
-  }
-
-  /**
    * Find all wallets for a specific workspace
    */
   async findWalletsByWorkspace(
@@ -148,7 +91,7 @@ export class WalletsService {
 
     // Check if user has access to the workspace using member service
     const memberWorkspaceIds =
-      await this.workspaceMembersService.findWorkspacesByUser(userId);
+      await this.workspaceMembersService.findWorkspacesByUser(  );
 
     if (!memberWorkspaceIds.includes(workspaceId)) {
       throw new UnauthorizedException(
@@ -160,7 +103,6 @@ export class WalletsService {
     return this.walletModel
       .find({ workspace: workspaceId })
       .sort({ createdAt: -1 })
-      .populate('parentWallet', 'id name address')
       .exec();
   }
 
@@ -168,10 +110,7 @@ export class WalletsService {
    * Find a specific wallet by ID
    */
   async findWalletById(walletId: string, userId: string): Promise<Wallet> {
-    const wallet = await this.walletModel
-      .findById(walletId)
-      .populate('parentWallet', 'id name address')
-      .exec();
+    const wallet = await this.walletModel.findById(walletId).exec();
 
     if (!wallet) {
       throw new NotFoundException(`Wallet with ID ${walletId} not found`);
@@ -222,30 +161,25 @@ export class WalletsService {
   }
 
   /**
-   * Get the next available HD index for a parent wallet
+   * Update wallet name
    */
-  private async getNextHdIndex(parentWalletId: string): Promise<number> {
-    // Find the highest HD index currently in use
-    const highestIndexWallet = await this.walletModel
-      .findOne({
-        parentWallet: parentWalletId,
-        walletType: WalletType.HD_DERIVED,
-      })
-      .sort({ hdIndex: -1 })
-      .exec();
-
-    // Start from index 1 if no derived wallets exist yet
-    return highestIndexWallet && highestIndexWallet.hdIndex !== undefined
-      ? highestIndexWallet.hdIndex + 1
-      : 1;
-  }
-
   async updateWalletName(
     id: string,
-    updateWalletNameDto: UpdateWalletNameDto,
-  ): Promise<Wallet | null> {
-    return this.walletModel
-      .findByIdAndUpdate(id, { name: updateWalletNameDto.name }, { new: true })
+    name: string,
+    userId: string,
+  ): Promise<Wallet> {
+    // First check if the wallet exists and user has access to it
+    await this.findWalletById(id, userId);
+
+    // Update the wallet name
+    const updatedWallet = await this.walletModel
+      .findByIdAndUpdate(id, { name }, { new: true })
       .exec();
+
+    if (!updatedWallet) {
+      throw new NotFoundException(`Wallet with ID ${id} not found`);
+    }
+
+    return updatedWallet;
   }
 }
