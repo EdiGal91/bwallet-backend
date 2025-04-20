@@ -30,22 +30,6 @@ export class WorkspaceMembersController {
     private readonly configService: ConfigService,
   ) {}
 
-  @Post('migrate')
-  async migrateMembers(@Req() req: RequestWithUser) {
-    // Security: Only allow migration from admin emails or in development
-    const adminEmails =
-      this.configService.get<string>('ADMIN_EMAILS')?.split(',') || [];
-    const isDevelopment =
-      this.configService.get<string>('NODE_ENV') !== 'production';
-
-    if (!isDevelopment && !adminEmails.includes(req.user.email)) {
-      return { success: false, message: 'Unauthorized to perform migration' };
-    }
-
-    const count = await this.workspaceMembersService.migrateExistingMembers();
-    return { success: true, migratedCount: count };
-  }
-
   @Get('workspaces/:workspaceId/members')
   async getWorkspaceMembers(@Param('workspaceId') workspaceId: string) {
     const members =

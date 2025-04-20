@@ -26,14 +26,6 @@ export class Workspace {
   @Prop({ required: true })
   name: string;
 
-  // Keep the members array for backward compatibility during migration
-  // This will be removed after migration is complete
-  @Prop({
-    type: [{ type: MongooseSchema.Types.ObjectId, ref: 'User' }],
-    deprecated: true,
-  })
-  members?: User[];
-
   @Prop()
   createdAt?: Date;
 

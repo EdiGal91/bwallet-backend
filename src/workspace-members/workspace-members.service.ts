@@ -284,59 +284,6 @@ export class WorkspaceMembersService {
   }
 
   /**
-   * Migrate existing workspace members from the workspace schema to workspace-members collection
-   */
-  async migrateExistingMembers(): Promise<number> {
-    // Get all workspaces
-    const workspaces = await this.workspacesService.findAllForMigration();
-    let migratedCount = 0;
-
-    for (const workspace of workspaces) {
-      // Skip if no members array or empty
-      if (!workspace.members || workspace.members.length === 0) {
-        continue;
-      }
-
-      // Get the workspace ID safely
-      const workspaceId = workspace.id || '';
-      if (!workspaceId) {
-        console.error('Workspace has no valid ID');
-        continue;
-      }
-
-      // Add each member to the new collection
-      for (const member of workspace.members) {
-        try {
-          // Convert member to string safely
-          const userId = member ? `${member}` : '';
-          if (!userId) continue;
-
-          // Check if already migrated
-          const existingMembership = await this.workspaceMemberModel.findOne({
-            workspace: workspaceId,
-            user: userId,
-          });
-
-          if (!existingMembership) {
-            const newMembership = new this.workspaceMemberModel({
-              workspace: workspaceId,
-              user: userId,
-              role: 'member',
-              joinedAt: workspace.createdAt || new Date(), // Use workspace creation date as a fallback
-            });
-            await newMembership.save();
-            migratedCount++;
-          }
-        } catch (error) {
-          console.error(`Error migrating member for workspace ${workspaceId}`);
-        }
-      }
-    }
-
-    return migratedCount;
-  }
-
-  /**
    * Remove all members from a workspace when deleting the workspace
    */
   async removeAllMembersByWorkspace(workspaceId: string): Promise<number> {

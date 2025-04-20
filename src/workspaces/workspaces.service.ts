@@ -72,11 +72,6 @@ export class WorkspacesService {
     return workspace;
   }
 
-  // This method is used for migration only and will be removed after migration
-  async findAllForMigration(): Promise<Workspace[]> {
-    return this.workspaceModel.find().exec();
-  }
-
   /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
   // Check if a user has specified role or higher privileges in a workspace
   async checkUserRole(
@@ -102,48 +97,12 @@ export class WorkspacesService {
 
       // Lower index means higher privilege
       return userRoleIndex <= requiredRoleIndex;
-    } catch (error: unknown) {
+    } catch {
       // Silently return false on errors
       return false;
     }
   }
   /* eslint-enable */
-
-  // Legacy method - kept for reference but should not be used anymore
-  // Use WorkspaceMembersService.addMember instead
-  async addMember(
-    workspaceId: string,
-    ownerId: string,
-    memberId: string,
-  ): Promise<Workspace> {
-    // Check if user is owner through workspace-members
-    const isOwner = await this.checkUserRole(workspaceId, ownerId, 'owner');
-
-    if (!isOwner) {
-      throw new UnauthorizedException('Only workspace owners can add members');
-    }
-
-    const workspace = await this.findOne(workspaceId);
-
-    // Initialize members array if it doesn't exist
-    if (!workspace.members) {
-      workspace.members = [];
-    }
-
-    // Add member if they aren't already a member
-    if (!workspace.members.includes(memberId as any)) {
-      workspace.members.push(memberId as any);
-
-      // Use the model instead of the document for save
-      await this.workspaceModel.findByIdAndUpdate(
-        workspaceId,
-        { members: workspace.members },
-        { new: true },
-      );
-    }
-
-    return this.findOne(workspaceId);
-  }
 
   async update(id: string, name: string, userId: string): Promise<Workspace> {
     // Check if user is owner or admin
