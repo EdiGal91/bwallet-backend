@@ -46,7 +46,10 @@ export class WalletsService {
     const memberWorkspaceIds =
       await this.workspaceMembersService.findWorkspacesByUser(userId);
 
-    if (!memberWorkspaceIds.includes(createWalletDto.workspaceId)) {
+    const hasAccessToWorkspace = memberWorkspaceIds.includes(
+      createWalletDto.workspaceId,
+    );
+    if (!hasAccessToWorkspace) {
       throw new UnauthorizedException(
         `You don't have access to the workspace with ID ${createWalletDto.workspaceId}`,
       );
