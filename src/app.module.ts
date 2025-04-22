@@ -8,6 +8,7 @@ import { UsersModule } from './users/users.module';
 import { WorkspacesModule } from './workspaces/workspaces.module';
 import { WorkspaceMembersModule } from './workspace-members/workspace-members.module';
 import { WalletsModule } from './wallets/wallets.module';
+import { NetworksModule } from './networks/networks.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { WalletsModule } from './wallets/wallets.module';
     WorkspacesModule,
     WorkspaceMembersModule,
     WalletsModule,
+    NetworksModule,
   ],
   controllers: [AppController],
   providers: [AppService],
