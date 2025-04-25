@@ -40,6 +40,25 @@ export class WalletGeneratorService {
         publicKey: hdNode.publicKey,
         derivationPath: `m/44'/60'/0'/0/0`, // Default path for main wallet
         extendedKey: hdNode.extendedKey,
+        walletType: WalletType.HD_MAIN,
+      };
+    }
+
+    // For Polygon wallets (uses the same derivation as Ethereum)
+    if (blockchain === BlockchainType.POLYGON) {
+      // Polygon uses the Ethereum derivation path and wallet structure
+      const hdNode = ethers.HDNodeWallet.fromMnemonic(
+        ethers.Mnemonic.fromPhrase(mnemonic),
+      );
+
+      return {
+        address: hdNode.address,
+        privateKey: hdNode.privateKey,
+        mnemonic: mnemonic,
+        publicKey: hdNode.publicKey,
+        derivationPath: `m/44'/60'/0'/0/0`, // Polygon uses the same path as Ethereum
+        extendedKey: hdNode.extendedKey,
+        walletType: WalletType.HD_MAIN,
       };
     }
 
