@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Network, NetworkDocument } from './schemas/network.schema';
@@ -58,29 +58,4 @@ export class NetworksService {
     return networksWithTokens;
   }
 
-  /**
-   * Find a specific network with its tokens
-   */
-  async findOneWithTokens(id: string, includeTokens = false): Promise<any> {
-    const network = await this.networkModel.findById(id).lean().exec();
-
-    if (!network) {
-      throw new NotFoundException(`Network with ID ${id} not found`);
-    }
-
-    if (!includeTokens) {
-      return network;
-    }
-
-    const tokens = await this.tokenModel
-      .find({ network: network._id, isActive: true })
-      .sort({ sortOrder: 1, symbol: 1 })
-      .lean()
-      .exec();
-
-    return {
-      ...network,
-      tokens,
-    };
-  }
 }
