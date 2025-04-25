@@ -13,7 +13,7 @@ import { Token, TokenSchema } from './schemas/token.schema';
     ]),
   ],
   controllers: [NetworksController],
-     providers: [NetworksService],
+  providers: [NetworksService],
   exports: [NetworksService],
 })
 export class NetworksModule {}
