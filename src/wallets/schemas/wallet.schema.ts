@@ -7,6 +7,7 @@ export type WalletDocument = Wallet & Document;
 export enum BlockchainType {
   ETHEREUM = 'ethereum',
   BITCOIN = 'bitcoin',
+  POLYGON = 'polygon',
   // More chains can be added in the future
 }
 

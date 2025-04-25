@@ -57,5 +57,4 @@ export class NetworksService {
 
     return networksWithTokens;
   }
-
 }

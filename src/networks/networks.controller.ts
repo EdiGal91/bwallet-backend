@@ -12,6 +12,4 @@ export class NetworksController {
     // Always include tokens for networks
     return await this.networksService.findAllWithTokens(false, true);
   }
-
-
 }
