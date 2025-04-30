@@ -119,13 +119,7 @@ export class WalletsService {
       throw new NotFoundException(`Wallet with ID ${walletId} not found`);
     }
 
-    // Get the workspace ID safely using string conversion
-    /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
-    const workspaceId =
-      typeof wallet.workspace === 'string'
-        ? wallet.workspace
-        : (wallet.workspace as any).id || (wallet.workspace as any)._id;
-    /* eslint-enable */
+    const workspaceId = wallet.workspace.toString();
 
     // Check if user has access to the workspace using member service
     const memberWorkspaceIds =
