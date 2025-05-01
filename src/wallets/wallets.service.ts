@@ -110,7 +110,19 @@ export class WalletsService {
   }
 
   /**
-   * Find a specific wallet by ID
+   * Find wallet by ID without any access checks
+   * PUBLIC API - No authorization required
+   * Used for checkout sessions and other public endpoints
+   */
+  async getWalletWithoutAccessCheck(walletId: string): Promise<Wallet | null> {
+    const wallet = await this.walletModel.findById(walletId).exec();
+    return wallet;
+  }
+
+  /**
+   * Find wallet by ID and verify user has access to it
+   * PROTECTED API - Requires authorization
+   * Used for admin/user wallet management
    */
   async findWalletById(walletId: string, userId: string): Promise<Wallet> {
     const wallet = await this.walletModel.findById(walletId).exec();
@@ -119,7 +131,7 @@ export class WalletsService {
       throw new NotFoundException(`Wallet with ID ${walletId} not found`);
     }
 
-    const workspaceId = wallet.workspace.toString();
+    const workspaceId = String(wallet.workspace);
 
     // Check if user has access to the workspace using member service
     const memberWorkspaceIds =

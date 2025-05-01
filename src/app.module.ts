@@ -9,6 +9,8 @@ import { WorkspacesModule } from './workspaces/workspaces.module';
 import { WorkspaceMembersModule } from './workspace-members/workspace-members.module';
 import { WalletsModule } from './wallets/wallets.module';
 import { NetworksModule } from './networks/networks.module';
+import { CheckoutSessionsModule } from './checkout-sessions/checkout-sessions.module';
+import mongoose from 'mongoose';
 
 @Module({
   imports: [
@@ -18,9 +20,23 @@ import { NetworksModule } from './networks/networks.module';
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        uri: configService.get<string>('MONGODB_URI'),
-      }),
+      useFactory: (configService: ConfigService) => {
+        const isProd = configService.get<string>('NODE_ENV') === 'production';
+        return {
+          uri: configService.get<string>('MONGODB_URI'),
+          autoIndex: !isProd,
+          connectionFactory: (connection: mongoose.Connection) => {
+            connection.on('index', (err) => {
+              if (err) {
+                console.error('MongoDB index error: ', err);
+              } else {
+                console.log('MongoDB indices created');
+              }
+            });
+            return connection;
+          },
+        };
+      },
     }),
     AuthModule,
     UsersModule,
@@ -28,6 +44,7 @@ import { NetworksModule } from './networks/networks.module';
     WorkspaceMembersModule,
     WalletsModule,
     NetworksModule,
+    CheckoutSessionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
