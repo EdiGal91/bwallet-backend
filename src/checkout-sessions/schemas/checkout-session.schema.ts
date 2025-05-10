@@ -17,9 +17,9 @@ export enum CheckoutSessionStatus {
   timestamps: true,
   toJSON: {
     virtuals: true,
-    transform: (_, ret) => {
+    transform: (_, ret: Record<string, any>) => {
       if (ret._id) {
-        ret.id = ret._id.toString();
+        ret.id = String(ret._id);
       }
       delete ret._id;
       delete ret.__v;
@@ -73,7 +73,7 @@ export class CheckoutSession {
   @Prop()
   customerName?: string;
 
-  @Prop()
+  @Prop({ type: Object })
   metadata?: Record<string, any>;
 
   @Prop({ required: true })
