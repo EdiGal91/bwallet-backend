@@ -67,6 +67,9 @@ export class CheckoutSession {
   @Prop({ required: true })
   redirectUrl: string;
 
+  @Prop({ required: true })
+  checkoutUrl: string;
+
   @Prop()
   customerEmail?: string;
 

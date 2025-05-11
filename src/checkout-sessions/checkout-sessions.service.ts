@@ -14,6 +14,7 @@ import { CreateCheckoutSessionDto } from './dto/create-checkout-session.dto';
 import { WalletsService } from '../wallets/wallets.service';
 import { WorkspacesService } from '../workspaces/workspaces.service';
 import * as crypto from 'crypto';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class CheckoutSessionsService {
@@ -22,6 +23,7 @@ export class CheckoutSessionsService {
     private checkoutSessionModel: Model<CheckoutSessionDocument>,
     private walletsService: WalletsService,
     private workspacesService: WorkspacesService,
+    private configService: ConfigService,
   ) {}
 
   async createCheckoutSession(
@@ -75,6 +77,11 @@ export class CheckoutSessionsService {
     // Generate a unique token
     const token = crypto.randomBytes(16).toString('hex');
 
+    // Build the checkout URL
+    const frontendUrl =
+      this.configService.get<string>('FRONTEND_URL') || 'http://localhost:5173';
+    const checkoutUrl = `${frontendUrl}/checkout/${token}`;
+
     // Create checkout session
     const checkoutSession = new this.checkoutSessionModel({
       workspace: workspaceId,
@@ -83,6 +90,7 @@ export class CheckoutSessionsService {
       currency,
       amount,
       redirectUrl,
+      checkoutUrl,
       customerEmail,
       customerName,
       metadata,

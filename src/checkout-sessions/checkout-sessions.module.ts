@@ -8,6 +8,7 @@ import {
 } from './schemas/checkout-session.schema';
 import { WalletsModule } from '../wallets/wallets.module';
 import { WorkspacesModule } from '../workspaces/workspaces.module';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { WorkspacesModule } from '../workspaces/workspaces.module';
     ]),
     WalletsModule,
     WorkspacesModule,
+    ConfigModule,
   ],
   controllers: [CheckoutSessionsController],
   providers: [CheckoutSessionsService],
