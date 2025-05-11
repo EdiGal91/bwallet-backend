@@ -42,9 +42,6 @@ export class CheckoutSessionsController {
   async findCheckoutSessionByToken(
     @Param('token') token: string,
   ): Promise<CheckoutSession> {
-    throw new NotImplementedException(
-      'Cancellation functionality will be implemented in a future release',
-    );
     return this.checkoutSessionsService.findByToken(token);
   }
 

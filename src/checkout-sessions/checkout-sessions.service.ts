@@ -150,11 +150,10 @@ export class CheckoutSessionsService {
     return checkoutSession.save();
   }
 
-  async findByToken(token: string): Promise<CheckoutSession> {
+  async findByToken(token: string): Promise<any> {
     const checkoutSession = await this.checkoutSessionModel
       .findOne({ token })
-      .populate('workspace')
-      .populate('wallet')
+      .populate('wallet', 'address blockchain')
       .exec();
 
     if (!checkoutSession) {
@@ -163,6 +162,36 @@ export class CheckoutSessionsService {
       );
     }
 
-    return checkoutSession;
+    // Create a new object with only the fields we want to expose
+    const {
+      wallet,
+      blockchain,
+      currency,
+      amount,
+      status,
+      redirectUrl,
+      customerEmail,
+      customerName,
+      metadata,
+      token: sessionToken,
+      expiresAt,
+    } = checkoutSession.toJSON();
+
+    return {
+      wallet: {
+        address: wallet.address,
+        blockchain: wallet.blockchain,
+      },
+      blockchain,
+      currency,
+      amount,
+      status,
+      redirectUrl,
+      customerEmail,
+      customerName,
+      metadata,
+      token: sessionToken,
+      expiresAt,
+    };
   }
 }
