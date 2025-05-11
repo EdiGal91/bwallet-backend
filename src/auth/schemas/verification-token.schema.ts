@@ -5,7 +5,10 @@ export interface VerificationTokenDocument
   extends VerificationToken,
     Document {}
 
-@Schema({ timestamps: true })
+@Schema({
+  timestamps: true,
+  collection: 'verification_tokens',
+})
 export class VerificationToken {
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
   userId: string;

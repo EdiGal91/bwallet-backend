@@ -7,6 +7,7 @@ export type WorkspaceMemberDocument = WorkspaceMember & Document;
 
 @Schema({
   timestamps: true,
+  collection: 'workspace_members',
   toJSON: {
     /* eslint-disable @typescript-eslint/no-unsafe-assignment */
     transform: (doc, ret) => {

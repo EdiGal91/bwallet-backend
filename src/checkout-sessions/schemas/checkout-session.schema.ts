@@ -15,6 +15,7 @@ export enum CheckoutSessionStatus {
 
 @Schema({
   timestamps: true,
+  collection: 'checkout_sessions',
   toJSON: {
     virtuals: true,
     transform: (_, ret: Record<string, any>) => {
