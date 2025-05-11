@@ -1,9 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Document } from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
 import { User } from '../../users/schemas/user.schema';
 import { UsersService } from '../../users/users.service';
+import {
+  EmailVerificationToken,
+  EmailVerificationTokenDocument,
+} from '../schemas/verification-token.schema';
 
 // Would typically be in its own schema file
 export interface VerificationToken {
@@ -19,8 +23,8 @@ export interface VerificationTokenDocument
 @Injectable()
 export class VerificationService {
   constructor(
-    @InjectModel('VerificationToken')
-    private verificationTokenModel: Model<VerificationTokenDocument>,
+    @InjectModel(EmailVerificationToken.name)
+    private emailVerificationTokenModel: Model<EmailVerificationTokenDocument>,
     private usersService: UsersService,
   ) {}
 
@@ -33,7 +37,7 @@ export class VerificationService {
     expiresAt.setHours(expiresAt.getHours() + 24);
 
     // Create a new verification token
-    const verificationToken = new this.verificationTokenModel({
+    const verificationToken = new this.emailVerificationTokenModel({
       userId,
       token,
       expiresAt,
@@ -46,7 +50,7 @@ export class VerificationService {
 
   async verifyEmail(token: string): Promise<User> {
     // Find the token
-    const verificationToken = await this.verificationTokenModel.findOne({
+    const verificationToken = await this.emailVerificationTokenModel.findOne({
       token,
       expiresAt: { $gt: new Date() },
     });
@@ -61,7 +65,9 @@ export class VerificationService {
     });
 
     // Delete the token
-    await this.verificationTokenModel.deleteOne({ _id: verificationToken._id });
+    await this.emailVerificationTokenModel.deleteOne({
+      _id: verificationToken._id,
+    });
 
     return user;
   }

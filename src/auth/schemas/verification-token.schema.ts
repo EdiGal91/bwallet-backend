@@ -1,15 +1,15 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
 
-export interface VerificationTokenDocument
-  extends VerificationToken,
+export interface EmailVerificationTokenDocument
+  extends EmailVerificationToken,
     Document {}
 
 @Schema({
   timestamps: true,
-  collection: 'verification_tokens',
+  collection: 'email_verification_tokens',
 })
-export class VerificationToken {
+export class EmailVerificationToken {
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
   userId: string;
 
@@ -20,5 +20,6 @@ export class VerificationToken {
   expiresAt: Date;
 }
 
-export const VerificationTokenSchema =
-  SchemaFactory.createForClass(VerificationToken);
+export const EmailVerificationTokenSchema = SchemaFactory.createForClass(
+  EmailVerificationToken,
+);

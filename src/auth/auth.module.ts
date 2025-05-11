@@ -13,8 +13,8 @@ import { SessionService } from './services/session.service';
 import { Session, SessionSchema } from './schemas/session.schema';
 import { VerificationService } from './services/verification.service';
 import {
-  VerificationToken,
-  VerificationTokenSchema,
+  EmailVerificationToken,
+  EmailVerificationTokenSchema,
 } from './schemas/verification-token.schema';
 import { NotificationsModule } from '../notifications/notifications.module';
 
@@ -25,7 +25,10 @@ import { NotificationsModule } from '../notifications/notifications.module';
     NotificationsModule,
     MongooseModule.forFeature([
       { name: Session.name, schema: SessionSchema },
-      { name: VerificationToken.name, schema: VerificationTokenSchema },
+      {
+        name: EmailVerificationToken.name,
+        schema: EmailVerificationTokenSchema,
+      },
     ]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
