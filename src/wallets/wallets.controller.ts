@@ -10,10 +10,11 @@ import {
 } from '@nestjs/common';
 import { WalletsService } from './wallets.service';
 import { Wallet } from './schemas/wallet.schema';
-import { CreateWalletDto } from './dto/create-wallet.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Request } from 'express';
 import { UpdateWalletNameDto } from './dto/update-wallet-name.dto';
+import { CreateWorkspaceWalletDto } from './dto/create-workspace-wallet.dto';
+import { WorkspaceWallet } from './schemas/workspace-wallet.schema';
 
 interface RequestWithUser extends Request {
   user: {
@@ -28,39 +29,42 @@ export class WalletsController {
   constructor(private readonly walletsService: WalletsService) {}
 
   @Post()
-  async createWallet(
-    @Body() createWalletDto: CreateWalletDto,
+  async createWorkspaceWallet(
+    @Body() createWorkspaceWalletDto: CreateWorkspaceWalletDto,
     @Req() req: RequestWithUser,
   ) {
-    return this.walletsService.createMainWallet(
-      createWalletDto,
+    return this.walletsService.createWorkspaceWallet(
+      createWorkspaceWalletDto,
       req.user.userId,
     );
   }
 
   @Get('workspace/:workspaceId')
-  async findWalletsByWorkspace(
+  async findWorkspaceWalletsByWorkspace(
     @Param('workspaceId') workspaceId: string,
     @Req() req: RequestWithUser,
   ) {
-    return this.walletsService.findWalletsByWorkspace(
+    return this.walletsService.findWorkspaceWalletsByWorkspace(
       workspaceId,
       req.user.userId,
     );
   }
 
   @Get(':id')
-  async findWalletById(@Param('id') id: string, @Req() req: RequestWithUser) {
-    return this.walletsService.findWalletById(id, req.user.userId);
+  async findWorkspaceWalletById(
+    @Param('id') id: string,
+    @Req() req: RequestWithUser,
+  ) {
+    return this.walletsService.findWorkspaceWalletById(id, req.user.userId);
   }
 
   @Put(':id/name')
-  async updateWalletName(
+  async updateWorkspaceWalletName(
     @Param('id') id: string,
     @Body() updateWalletNameDto: UpdateWalletNameDto,
     @Req() req: RequestWithUser,
-  ): Promise<Wallet> {
-    return this.walletsService.updateWalletName(
+  ): Promise<WorkspaceWallet> {
+    return this.walletsService.updateWorkspaceWalletName(
       id,
       updateWalletNameDto.name,
       req.user.userId,
