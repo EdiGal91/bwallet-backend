@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Network, NetworkDocument } from './schemas/network.schema';
 import { Token, TokenDocument } from './schemas/token.schema';
+import { NetworkWithTokens } from './dto/network-with-tokens.dto';
 
 @Injectable()
 export class NetworksService {
@@ -13,13 +14,18 @@ export class NetworksService {
     private readonly tokenModel: Model<TokenDocument>,
   ) {}
 
+  findAllWithTokens(
+    includeInactive?: boolean,
+    includeTokens?: false,
+  ): Promise<Network[]>;
+  findAllWithTokens(
+    includeInactive?: boolean,
+    includeTokens?: true,
+  ): Promise<NetworkWithTokens[]>;
   /**
    * Find all networks with optional token information
    */
-  async findAllWithTokens(
-    includeInactive = false,
-    includeTokens = false,
-  ): Promise<any[]> {
+  async findAllWithTokens(includeInactive = false, includeTokens = false) {
     // Build the network query
     const networkQuery = includeInactive ? {} : { isActive: true };
 
@@ -27,7 +33,6 @@ export class NetworksService {
     const networks = await this.networkModel
       .find(networkQuery)
       .sort({ sortOrder: 1, name: 1 })
-      .lean()
       .exec();
 
     // If tokens are not requested, return just the networks
@@ -45,16 +50,15 @@ export class NetworksService {
         const tokens = await this.tokenModel
           .find(tokenQuery)
           .sort({ sortOrder: 1, symbol: 1 })
-          .lean()
           .exec();
 
         return {
-          ...network,
-          tokens,
+          ...network.toJSON(),
+          tokens: tokens.map((token) => token.toJSON()),
         };
       }),
     );
 
-    return networksWithTokens;
+    return networksWithTokens as NetworkWithTokens[];
   }
 }
