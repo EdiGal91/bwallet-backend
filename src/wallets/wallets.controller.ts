@@ -44,12 +44,11 @@ export class WalletsController {
   async findWorkspaceWallets(
     @Query('workspaceId') workspaceId: string,
     @Req() req: RequestWithUser,
-  ): Promise<(WorkspaceWallet & { wallets: Wallet[] }) | null> {
+  ): Promise<{ data: (WorkspaceWallet & { wallets: Wallet[] }) | null }> {
     return this.walletsService.findWorkspaceWallets(
       workspaceId,
       req.user.userId,
     );
-    
   }
 
   @Get(':id')

@@ -167,7 +167,7 @@ export class WalletsService {
   async findWorkspaceWallets(
     workspaceId: string,
     userId: string,
-  ): Promise<(WorkspaceWallet & { wallets: Wallet[] }) | null> {
+  ): Promise<{ data: (WorkspaceWallet & { wallets: Wallet[] }) | null }> {
     // First check if the workspace exists
     const workspace = await this.workspacesService.findById(workspaceId);
 
@@ -192,7 +192,7 @@ export class WalletsService {
       .exec();
 
     if (!workspaceWallet) {
-      return null;
+      return { data: null };
     }
 
     // Get associated wallets
@@ -202,8 +202,10 @@ export class WalletsService {
 
     // Return the workspace wallet with its wallets
     return {
-      ...workspaceWallet.toObject(),
-      wallets,
+      data: {
+        ...workspaceWallet.toObject(),
+        wallets,
+      },
     };
   }
 }
