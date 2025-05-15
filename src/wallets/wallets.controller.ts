@@ -7,6 +7,7 @@ import {
   Req,
   UseGuards,
   Put,
+  Query,
 } from '@nestjs/common';
 import { WalletsService } from './wallets.service';
 import { Wallet } from './schemas/wallet.schema';
@@ -39,9 +40,9 @@ export class WalletsController {
     );
   }
 
-  @Get('workspace/:workspaceId')
+  @Get()
   async findWorkspaceWalletsByWorkspace(
-    @Param('workspaceId') workspaceId: string,
+    @Query('workspaceId') workspaceId: string,
     @Req() req: RequestWithUser,
   ): Promise<WorkspaceWallet[]> {
     return this.walletsService.findWorkspaceWalletsByWorkspace(
