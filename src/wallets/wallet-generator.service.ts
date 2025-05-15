@@ -26,9 +26,8 @@ export class WalletGeneratorService {
     // Generate a random mnemonic (recovery phrase)
     const mnemonic = bip39.generateMnemonic();
 
-    // For Ethereum wallets
-    if (blockchain === BlockchainType.ETHEREUM) {
-      // Create an Ethereum wallet from the mnemonic
+    // For EVM-compatible chains (Ethereum and Polygon)
+    if ([BlockchainType.ETHEREUM, BlockchainType.POLYGON].includes(blockchain)) {
       const hdNode = ethers.HDNodeWallet.fromMnemonic(
         ethers.Mnemonic.fromPhrase(mnemonic),
       );
@@ -38,29 +37,12 @@ export class WalletGeneratorService {
         privateKey: hdNode.privateKey,
         mnemonic: mnemonic,
         publicKey: hdNode.publicKey,
-        derivationPath: `m/44'/60'/0'/0/0`, // Default path for main wallet
+        derivationPath: `m/44'/60'/0'/0/0`, // Standard path for EVM chains
         extendedKey: hdNode.extendedKey,
         walletType: WalletType.HD_MAIN,
       };
     }
 
-    // For Polygon wallets (uses the same derivation as Ethereum)
-    if (blockchain === BlockchainType.POLYGON) {
-      // Polygon uses the Ethereum derivation path and wallet structure
-      const hdNode = ethers.HDNodeWallet.fromMnemonic(
-        ethers.Mnemonic.fromPhrase(mnemonic),
-      );
-
-      return {
-        address: hdNode.address,
-        privateKey: hdNode.privateKey,
-        mnemonic: mnemonic,
-        publicKey: hdNode.publicKey,
-        derivationPath: `m/44'/60'/0'/0/0`, // Polygon uses the same path as Ethereum
-        extendedKey: hdNode.extendedKey,
-        walletType: WalletType.HD_MAIN,
-      };
-    }
-    throw new Error(`Unsupported blockchain type: ${blockchain as string}`);
+    throw new Error(`Unsupported blockchain type: ${blockchain}`);
   }
 }
