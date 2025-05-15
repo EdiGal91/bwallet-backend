@@ -99,92 +99,6 @@ export class WalletsService {
   }
 
   /**
-   * Create a new main wallet for a workspace
-   */
-  async createMainWallet(
-    createWalletDto: CreateWalletDto,
-    userId: string,
-  ): Promise<Wallet> {
-    // First check if the workspace exists
-    const workspace = await this.workspacesService.findById(
-      createWalletDto.workspaceId,
-    );
-
-    if (!workspace) {
-      throw new NotFoundException(
-        `Workspace with ID ${createWalletDto.workspaceId} not found`,
-      );
-    }
-
-    // Check if user has access to the workspace using member service
-    const memberWorkspaceIds =
-      await this.workspaceMembersService.findWorkspacesByUser(userId);
-
-    const hasAccessToWorkspace = memberWorkspaceIds.includes(
-      createWalletDto.workspaceId,
-    );
-    if (!hasAccessToWorkspace) {
-      throw new UnauthorizedException(
-        `You don't have access to the workspace with ID ${createWalletDto.workspaceId}`,
-      );
-    }
-
-    // Generate a new wallet for the specified blockchain
-    const generatedWallet = this.walletGeneratorService.generateMainWallet(
-      createWalletDto.blockchain,
-    );
-
-    // Create and save the wallet
-    const wallet = new this.walletModel({
-      blockchain: createWalletDto.blockchain,
-      walletType: WalletType.HD_MAIN,
-      workspace: createWalletDto.workspaceId,
-      address: generatedWallet.address,
-      publicKey: generatedWallet.publicKey,
-      privateKey: generatedWallet.privateKey,
-      mnemonic: generatedWallet.mnemonic,
-      derivationPath: generatedWallet.derivationPath,
-      extendedKey: generatedWallet.extendedKey,
-      balance: 0,
-    });
-
-    return wallet.save();
-  }
-
-
-  /**
-   * Find all workspace wallets for a specific workspace
-   */
-  async findWorkspaceWalletsByWorkspace(
-    workspaceId: string,
-    userId: string,
-  ): Promise<WorkspaceWallet[]> {
-    // First check if the workspace exists
-    const workspace = await this.workspacesService.findById(workspaceId);
-
-    if (!workspace) {
-      throw new NotFoundException(`Workspace with ID ${workspaceId} not found`);
-    }
-
-    // Check if user has access to the workspace using member service
-    const memberWorkspaceIds =
-      await this.workspaceMembersService.findWorkspacesByUser(userId);
-
-    if (!memberWorkspaceIds.includes(workspaceId)) {
-      throw new UnauthorizedException(
-        `You don't have access to the workspace with ID ${workspaceId}`,
-      );
-    }
-
-    // Find all workspace wallets for this workspace
-    const result = await this.workspaceWalletModel
-      .find({ workspace: workspaceId })
-      .sort({ createdAt: -1 })
-      .exec();
-    return result;
-  }
-
-  /**
    * Find wallet by ID without any access checks
    * PUBLIC API - No authorization required
    * Used for checkout sessions and other public endpoints
@@ -225,36 +139,6 @@ export class WalletsService {
   }
 
   /**
-   * Get wallet with sensitive data (for internal use only)
-   */
-  private async findWalletWithSensitiveData(
-    walletId: string,
-    userId: string,
-  ): Promise<Wallet> {
-    // First get the wallet
-    const wallet = await this.walletModel.findById(walletId).exec();
-    
-    if (!wallet) {
-      throw new NotFoundException(`Wallet with ID ${walletId} not found`);
-    }
-
-    // Check if user has access to the workspace wallet
-    await this.findWorkspaceWalletById(String(wallet.workspaceWallet), userId);
-
-    // Then get the full wallet with sensitive data
-    const walletWithSensitiveData = await this.walletModel
-      .findById(walletId)
-      .select('+privateKey +mnemonic +extendedKey')
-      .exec();
-
-    if (!walletWithSensitiveData) {
-      throw new NotFoundException(`Wallet with ID ${walletId} not found`);
-    }
-
-    return walletWithSensitiveData;
-  }
-
-  /**
    * Update wallet name
    */
   async updateWorkspaceWalletName(
@@ -275,5 +159,51 @@ export class WalletsService {
     }
 
     return updatedWallet;
+  }
+
+  /**
+   * Find workspace wallet with its related wallets for a specific workspace
+   */
+  async findWorkspaceWallets(
+    workspaceId: string,
+    userId: string,
+  ): Promise<(WorkspaceWallet & { wallets: Wallet[] }) | null> {
+    // First check if the workspace exists
+    const workspace = await this.workspacesService.findById(workspaceId);
+
+    if (!workspace) {
+      throw new NotFoundException(`Workspace with ID ${workspaceId} not found`);
+    }
+
+    // Check if user has access to the workspace using member service
+    const memberWorkspaceIds =
+      await this.workspaceMembersService.findWorkspacesByUser(userId);
+
+    if (!memberWorkspaceIds.includes(workspaceId)) {
+      throw new UnauthorizedException(
+        `You don't have access to the workspace with ID ${workspaceId}`,
+      );
+    }
+
+    // Find the workspace wallet for this workspace
+    const workspaceWallet = await this.workspaceWalletModel
+      .findOne({ workspace: workspaceId })
+      .sort({ createdAt: -1 })
+      .exec();
+
+    if (!workspaceWallet) {
+      return null;
+    }
+
+    // Get associated wallets
+    const wallets = await this.walletModel
+      .find({ workspaceWallet: workspaceWallet.id })
+      .exec();
+
+    // Return the workspace wallet with its wallets
+    return {
+      ...workspaceWallet.toObject(),
+      wallets,
+    };
   }
 }
