@@ -57,11 +57,12 @@ export class CheckoutSessionsService {
       throw new NotFoundException(`Wallet with ID ${walletId} not found`);
     }
 
-    if (String(wallet.workspace) !== workspaceId) {
-      throw new BadRequestException(
-        'Wallet does not belong to the specified workspace',
-      );
-    }
+    // TODO: Uncomment this when we have workspace wallets
+    // if (String(wallet.workspace) !== workspaceId) {
+    //   throw new BadRequestException(
+    //     'Wallet does not belong to the specified workspace',
+    //   );
+    // }
 
     // Ensure the wallet blockchain matches the requested blockchain
     if (wallet.blockchain !== blockchain) {

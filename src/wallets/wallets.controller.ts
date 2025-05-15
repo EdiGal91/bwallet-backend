@@ -32,7 +32,7 @@ export class WalletsController {
   async createWorkspaceWallet(
     @Body() createWorkspaceWalletDto: CreateWorkspaceWalletDto,
     @Req() req: RequestWithUser,
-  ) {
+  ): Promise<{ workspaceWallet: WorkspaceWallet; wallets: Wallet[] }> {
     return this.walletsService.createWorkspaceWallet(
       createWorkspaceWalletDto,
       req.user.userId,
@@ -43,7 +43,7 @@ export class WalletsController {
   async findWorkspaceWalletsByWorkspace(
     @Param('workspaceId') workspaceId: string,
     @Req() req: RequestWithUser,
-  ) {
+  ): Promise<WorkspaceWallet[]> {
     return this.walletsService.findWorkspaceWalletsByWorkspace(
       workspaceId,
       req.user.userId,
@@ -54,7 +54,7 @@ export class WalletsController {
   async findWorkspaceWalletById(
     @Param('id') id: string,
     @Req() req: RequestWithUser,
-  ) {
+  ): Promise<WorkspaceWallet> {
     return this.walletsService.findWorkspaceWalletById(id, req.user.userId);
   }
 

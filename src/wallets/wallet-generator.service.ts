@@ -61,12 +61,6 @@ export class WalletGeneratorService {
         walletType: WalletType.HD_MAIN,
       };
     }
-
-    // For Bitcoin wallets (placeholder for future implementation)
-    if (blockchain === BlockchainType.BITCOIN) {
-      throw new Error('Bitcoin wallet generation not yet implemented');
-    }
-
     throw new Error(`Unsupported blockchain type: ${blockchain as string}`);
   }
 }
