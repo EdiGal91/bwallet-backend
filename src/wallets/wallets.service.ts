@@ -162,12 +162,12 @@ export class WalletsService {
   }
 
   /**
-   * Find workspace wallet with its related wallets for a specific workspace
+   * Find all workspace wallets with their related wallets for a specific workspace
    */
   async findWorkspaceWallets(
     workspaceId: string,
     userId: string,
-  ): Promise<{ data: (WorkspaceWallet & { wallets: Wallet[] }) | null }> {
+  ): Promise<{ data: Array<WorkspaceWallet & { wallets: Wallet[] }> }> {
     // First check if the workspace exists
     const workspace = await this.workspacesService.findById(workspaceId);
 
@@ -185,27 +185,30 @@ export class WalletsService {
       );
     }
 
-    // Find the workspace wallet for this workspace
-    const workspaceWallet = await this.workspaceWalletModel
-      .findOne({ workspace: workspaceId })
+    // Find all workspace wallets for this workspace
+    const workspaceWallets = await this.workspaceWalletModel
+      .find({ workspace: workspaceId })
       .sort({ createdAt: -1 })
       .exec();
 
-    if (!workspaceWallet) {
-      return { data: null };
+    if (!workspaceWallets.length) {
+      return { data: [] };
     }
 
-    // Get associated wallets
-    const wallets = await this.walletModel
-      .find({ workspaceWallet: workspaceWallet.id })
-      .exec();
+    // For each workspace wallet, get its associated wallets
+    const result = await Promise.all(
+      workspaceWallets.map(async (workspaceWallet) => {
+        const wallets = await this.walletModel
+          .find({ workspaceWallet: workspaceWallet.id })
+          .exec();
 
-    // Return the workspace wallet with its wallets
-    return {
-      data: {
-        ...workspaceWallet.toObject(),
-        wallets,
-      },
-    };
+        return {
+          ...workspaceWallet.toObject(),
+          wallets,
+        };
+      }),
+    );
+
+    return { data: result };
   }
 }
