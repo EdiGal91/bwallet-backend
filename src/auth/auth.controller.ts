@@ -95,7 +95,7 @@ export class AuthController {
       throw new UnauthorizedException('Refresh token not found');
     }
 
-    return this.authService.refreshTokens(userId, refreshToken, response);
+    await this.authService.refreshTokens(userId, refreshToken, response);
   }
 
   @UseGuards(JwtAuthGuard)
