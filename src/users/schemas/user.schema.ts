@@ -11,6 +11,10 @@ export interface UserDocument extends User, Document {
   timestamps: true,
   toJSON: {
     transform: (doc, ret) => {
+      if (ret._id) {
+        ret.id = ret._id.toString();
+      }
+      delete ret._id;
       delete ret.password;
       delete ret.__v;
       return ret;

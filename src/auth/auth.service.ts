@@ -251,6 +251,7 @@ export class AuthService {
   }
 
   async getCurrentUser(userId: string): Promise<User> {
-    return this.usersService.findById(userId);
+    const user = await this.usersService.findById(userId);
+    return user.toJSON() as User;
   }
 }
