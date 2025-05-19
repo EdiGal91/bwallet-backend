@@ -199,12 +199,12 @@ export class WalletsService {
     const result = await Promise.all(
       workspaceWallets.map(async (workspaceWallet) => {
         const wallets = await this.walletModel
-          .find({ workspaceWallet: workspaceWallet.id })
+          .find({ workspaceWallet: workspaceWallet._id })
           .exec();
 
         return {
-          ...workspaceWallet.toObject(),
-          wallets,
+          ...workspaceWallet.toJSON(),
+          wallets: wallets.map((wallet) => wallet.toJSON()) as Wallet[],
         };
       }),
     );
