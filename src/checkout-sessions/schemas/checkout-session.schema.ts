@@ -2,7 +2,7 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
 import { Workspace } from '../../workspaces/schemas/workspace.schema';
 import { Wallet } from '../../wallets/schemas/wallet.schema';
-import { BlockchainType } from '../../wallets/schemas/wallet.schema';
+import { Network } from '../../networks/schemas/network.schema';
 
 export type CheckoutSessionDocument = CheckoutSession & Document;
 
@@ -46,11 +46,11 @@ export class CheckoutSession {
   wallet: Wallet;
 
   @Prop({
-    type: String,
-    enum: Object.values(BlockchainType),
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'Network',
     required: true,
   })
-  blockchain: BlockchainType;
+  network: Network;
 
   @Prop({ required: true })
   currency: string;

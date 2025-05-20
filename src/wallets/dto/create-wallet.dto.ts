@@ -1,5 +1,4 @@
-import { IsEnum, IsNotEmpty, IsString, MaxLength } from 'class-validator';
-import { BlockchainType } from '../schemas/wallet.schema';
+import { IsNotEmpty, IsString, MaxLength } from 'class-validator';
 
 export class CreateWalletDto {
   @IsNotEmpty()
@@ -12,6 +11,6 @@ export class CreateWalletDto {
   workspaceId: string;
 
   @IsNotEmpty()
-  @IsEnum(BlockchainType)
-  blockchain: BlockchainType;
+  @IsString()
+  networkId: string;
 }

@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Wallet, WalletDocument, WalletType, BlockchainType } from './schemas/wallet.schema';
+import { Wallet, WalletDocument, WalletType } from './schemas/wallet.schema';
 import { WalletGeneratorService } from './wallet-generator.service';
 import { WorkspacesService } from '../workspaces/workspaces.service';
 import { CreateWalletDto } from './dto/create-wallet.dto';
@@ -69,17 +69,15 @@ export class WalletsService {
     });
     await workspaceWallet.save();
 
-    // Create wallets for each blockchain
+    // Create wallets for each network
     const wallets: Wallet[] = [];
-    for (const blockchain of createWorkspaceWalletDto.blockchains) {
-      // Generate a new wallet for the specified blockchain
-      const generatedWallet = this.walletGeneratorService.generateMainWallet(
-        blockchain as BlockchainType,
-      );
+    for (const network of createWorkspaceWalletDto.networks) {
+      // Generate a new wallet for the specified network
+      const generatedWallet = this.walletGeneratorService.generateMainWallet(network.networkId);
 
       // Create and save the wallet
       const wallet = new this.walletModel({
-        blockchain,
+        networkId: network.networkId,
         walletType: WalletType.HD_MAIN,
         workspaceWallet: workspaceWallet.id,
         address: generatedWallet.address,
@@ -89,6 +87,7 @@ export class WalletsService {
         derivationPath: generatedWallet.derivationPath,
         extendedKey: generatedWallet.extendedKey,
         balance: 0,
+        selectedTokenIds: network.tokenIds,
       });
 
       const savedWallet = await wallet.save();

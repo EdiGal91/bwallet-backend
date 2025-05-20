@@ -1,12 +1,10 @@
 import {
-  IsEnum,
   IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
   Min,
 } from 'class-validator';
-import { BlockchainType } from '../../wallets/schemas/wallet.schema';
 
 export class CreateCheckoutSessionDto {
   @IsNotEmpty()
@@ -18,8 +16,8 @@ export class CreateCheckoutSessionDto {
   walletId: string;
 
   @IsNotEmpty()
-  @IsEnum(BlockchainType)
-  blockchain: BlockchainType;
+  @IsString()
+  networkId: string;
 
   @IsNotEmpty()
   @IsString()

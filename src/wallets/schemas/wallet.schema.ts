@@ -1,14 +1,10 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
 import { WorkspaceWallet } from './workspace-wallet.schema';
+import { Network } from '../../networks/schemas/network.schema';
+import { Token } from '../../networks/schemas/token.schema';
 
 export type WalletDocument = Wallet & Document;
-
-export enum BlockchainType {
-  ETHEREUM = 'ethereum',
-  POLYGON = 'polygon',
-  // More chains can be added in the future
-}
 
 export enum WalletType {
   HD_MAIN = 'hd_main', // Main wallet (master)
@@ -38,11 +34,11 @@ export class Wallet {
   id?: string;
 
   @Prop({
-    type: String,
-    enum: Object.values(BlockchainType),
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'Network',
     required: true,
   })
-  blockchain: BlockchainType;
+  networkId: Network;
 
   @Prop({
     type: String,
@@ -88,6 +84,12 @@ export class Wallet {
 
   @Prop({ default: 0 })
   balance: number;
+
+  @Prop([{
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'Token'
+  }])
+  selectedTokenIds: Token[];
 
   @Prop()
   createdAt?: Date;

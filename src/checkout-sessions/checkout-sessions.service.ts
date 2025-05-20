@@ -32,7 +32,7 @@ export class CheckoutSessionsService {
     const {
       workspaceId,
       walletId,
-      blockchain,
+      networkId,
       currency,
       amount,
       redirectUrl,
@@ -64,10 +64,10 @@ export class CheckoutSessionsService {
     //   );
     // }
 
-    // Ensure the wallet blockchain matches the requested blockchain
-    if (wallet.blockchain !== blockchain) {
+    // Ensure the wallet network matches the requested network
+    if (String(wallet.networkId) !== networkId) {
       throw new BadRequestException(
-        `Wallet blockchain type (${wallet.blockchain}) does not match requested blockchain type (${blockchain})`,
+        `Wallet network does not match requested network`,
       );
     }
 
@@ -87,7 +87,7 @@ export class CheckoutSessionsService {
     const checkoutSession = new this.checkoutSessionModel({
       workspace: workspaceId,
       wallet: walletId,
-      blockchain,
+      network: networkId,
       currency,
       amount,
       redirectUrl,
@@ -108,6 +108,7 @@ export class CheckoutSessionsService {
       .findById(id)
       .populate('workspace')
       .populate('wallet')
+      .populate('network')
       .exec();
 
     if (!checkoutSession) {
@@ -121,6 +122,7 @@ export class CheckoutSessionsService {
     return this.checkoutSessionModel
       .find({ workspace: workspaceId })
       .populate('wallet')
+      .populate('network')
       .sort({ createdAt: -1 })
       .exec();
   }
@@ -154,7 +156,8 @@ export class CheckoutSessionsService {
   async findByToken(token: string): Promise<any> {
     const checkoutSession = await this.checkoutSessionModel
       .findOne({ token })
-      .populate('wallet', 'address blockchain')
+      .populate('wallet', 'address networkId')
+      .populate('network', 'name symbol')
       .exec();
 
     if (!checkoutSession) {
@@ -166,7 +169,7 @@ export class CheckoutSessionsService {
     // Create a new object with only the fields we want to expose
     const {
       wallet,
-      blockchain,
+      network,
       currency,
       amount,
       status,
@@ -181,9 +184,15 @@ export class CheckoutSessionsService {
     return {
       wallet: {
         address: wallet.address,
-        blockchain: wallet.blockchain,
+        network: {
+          name: network.name,
+          symbol: network.symbol,
+        },
       },
-      blockchain,
+      network: {
+        name: network.name,
+        symbol: network.symbol,
+      },
       currency,
       amount,
       status,

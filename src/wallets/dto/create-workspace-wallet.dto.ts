@@ -1,7 +1,15 @@
-import { ArrayMinSize, IsArray, IsEnum, IsNotEmpty, IsString, MaxLength } from 'class-validator';
-import { BlockchainType } from '../schemas/wallet.schema';
+import { ArrayMinSize, IsArray, IsNotEmpty, IsString, MaxLength, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
 
-const ALLOWED_BLOCKCHAINS: string[] = Object.values(BlockchainType);
+class NetworkSelection {
+  @IsNotEmpty()
+  @IsString()
+  networkId: string;
+
+  @IsArray()
+  @IsString({ each: true })
+  tokenIds: string[];
+}
 
 export class CreateWorkspaceWalletDto {
   @IsNotEmpty()
@@ -15,9 +23,8 @@ export class CreateWorkspaceWalletDto {
 
   @IsNotEmpty()
   @IsArray()
-  @ArrayMinSize(1, {
-    message: `blockchains must include at least one of: ${ALLOWED_BLOCKCHAINS.join(', ')}`,
-  })
-  @IsEnum(BlockchainType, { each: true })
-  blockchains: BlockchainType[];
+  @ArrayMinSize(1)
+  @ValidateNested({ each: true })
+  @Type(() => NetworkSelection)
+  networks: NetworkSelection[];
 }
