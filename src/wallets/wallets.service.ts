@@ -16,6 +16,9 @@ import {
   WorkspaceWalletDocument,
 } from './schemas/workspace-wallet.schema';
 import { CreateWorkspaceWalletDto } from './dto/create-workspace-wallet.dto';
+import { NetworksService } from '../networks/networks.service';
+import { NetworkWithTokens } from '../networks/dto/network-with-tokens.dto';
+import { Token } from '../networks/schemas/token.schema';
 
 @Injectable()
 export class WalletsService {
@@ -29,6 +32,7 @@ export class WalletsService {
     private readonly walletGeneratorService: WalletGeneratorService,
     private readonly workspacesService: WorkspacesService,
     private readonly workspaceMembersService: WorkspaceMembersService,
+    private readonly networksService: NetworksService,
   ) {}
 
   /**
@@ -115,7 +119,7 @@ export class WalletsService {
   async findWorkspaceWalletById(
     walletId: string,
     userId: string,
-  ): Promise<WorkspaceWallet> {
+  ): Promise<WorkspaceWallet & { wallets: Array<Wallet & { network?: NetworkWithTokens; selectedTokens: Token[] }> }> {
     const wallet = await this.workspaceWalletModel.findById(walletId).exec();
 
     if (!wallet) {
@@ -134,7 +138,32 @@ export class WalletsService {
       );
     }
 
-    return wallet;
+    // Get all networks with their tokens
+    const networksWithTokens = await this.networksService.findAllWithTokens(false, true);
+
+    // Get all blockchain wallets for this workspace wallet
+    const wallets = await this.walletModel
+      .find({ workspaceWallet: walletId })
+      .exec();
+
+    // For each wallet, add the network and token information
+    const walletsWithDetails = wallets.map(wallet => {
+      const network = networksWithTokens.find(n => n.id === String(wallet.networkId));
+      const selectedTokens = network?.tokens.filter(token => 
+        wallet.selectedTokenIds.some(id => String(id) === String(token.id))
+      ) || [];
+
+      return {
+        ...wallet.toJSON(),
+        network,
+        selectedTokens,
+      };
+    });
+
+    return {
+      ...wallet.toJSON(),
+      wallets: walletsWithDetails,
+    };
   }
 
   /**

@@ -10,6 +10,7 @@ import {
 import { WalletGeneratorService } from './wallet-generator.service';
 import { WorkspacesModule } from '../workspaces/workspaces.module';
 import { WorkspaceMembersModule } from '../workspace-members/workspace-members.module';
+import { NetworksModule } from '../networks/networks.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { WorkspaceMembersModule } from '../workspace-members/workspace-members.m
     ]),
     WorkspacesModule,
     WorkspaceMembersModule,
+    NetworksModule,
   ],
   controllers: [WalletsController],
   providers: [WalletsService, WalletGeneratorService],
