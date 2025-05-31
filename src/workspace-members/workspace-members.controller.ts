@@ -12,15 +12,8 @@ import {
 import { WorkspaceMembersService } from './workspace-members.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AddWorkspaceMemberDto } from './dto/add-workspace-member.dto';
-import { Request } from 'express';
 import { ConfigService } from '@nestjs/config';
-
-interface RequestWithUser extends Request {
-  user: {
-    userId: string;
-    email: string;
-  };
-}
+import { RequestWithUser } from '../common/types/request.types';
 
 @Controller('workspace-members')
 @UseGuards(JwtAuthGuard)

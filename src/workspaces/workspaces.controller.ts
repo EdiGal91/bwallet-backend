@@ -15,21 +15,15 @@ import {
 import { WorkspacesService } from './workspaces.service';
 import { CreateWorkspaceDto } from './dto/create-workspace.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { Request } from 'express';
 import { WorkspaceMembersService } from '../workspace-members/workspace-members.service';
 import { Workspace } from './schemas/workspace.schema';
-
-interface RequestWithUser extends Request {
-  user: {
-    userId: string;
-    email: string;
-  };
-}
+import { RequestWithUser } from '../common/types/request.types';
 
 @Controller('workspaces')
 @UseGuards(JwtAuthGuard)
 export class WorkspacesController {
   constructor(
+    @Inject(forwardRef(() => WorkspacesService))
     private readonly workspacesService: WorkspacesService,
     @Inject(forwardRef(() => WorkspaceMembersService))
     private readonly workspaceMembersService: WorkspaceMembersService,

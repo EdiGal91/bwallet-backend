@@ -12,17 +12,10 @@ import {
 import { WalletsService } from './wallets.service';
 import { Wallet } from './schemas/wallet.schema';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { Request } from 'express';
 import { UpdateWalletNameDto } from './dto/update-wallet-name.dto';
 import { CreateWorkspaceWalletDto } from './dto/create-workspace-wallet.dto';
 import { WorkspaceWallet } from './schemas/workspace-wallet.schema';
-
-interface RequestWithUser extends Request {
-  user: {
-    userId: string;
-    email: string;
-  };
-}
+import { RequestWithUser } from '../common/types/request.types';
 
 @Controller('wallets')
 @UseGuards(JwtAuthGuard)

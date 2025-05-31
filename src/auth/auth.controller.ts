@@ -11,32 +11,14 @@ import {
   Get,
   Query,
 } from '@nestjs/common';
-import { Request as ExpressRequest, Response } from 'express';
+import { Response } from 'express';
 import { AuthService } from './auth.service';
 import { CreateUserDto } from '../users/dto/create-user.dto';
-import { User, UserDocument } from '../users/schemas/user.schema';
+import { User } from '../users/schemas/user.schema';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
-
-// Define request types
-interface RequestWithUser extends ExpressRequest {
-  user: UserDocument;
-}
-
-interface JwtUser {
-  userId: string;
-  email: string;
-}
-
-interface RequestWithJwtUser extends ExpressRequest {
-  user: JwtUser;
-  cookies: {
-    refresh_token?: string;
-    access_token?: string;
-    [key: string]: string | undefined;
-  };
-}
+import { RequestWithUser, RequestWithUserDocument } from '../common/types/request.types';
 
 @Controller('auth')
 export class AuthController {
@@ -74,7 +56,7 @@ export class AuthController {
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(
-    @Req() req: RequestWithUser,
+    @Req() req: RequestWithUserDocument,
     @Res({ passthrough: true }) response: Response,
   ) {
     return this.authService.login(req.user, req, response);
@@ -84,7 +66,7 @@ export class AuthController {
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   async refreshTokens(
-    @Req() req: RequestWithJwtUser,
+    @Req() req: RequestWithUser,
     @Res({ passthrough: true }) response: Response,
   ) {
     const { userId } = req.user;
@@ -102,7 +84,7 @@ export class AuthController {
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   async logout(
-    @Req() req: RequestWithJwtUser,
+    @Req() req: RequestWithUser,
     @Res({ passthrough: true }) response: Response,
   ) {
     return this.authService.logout(req.user.userId, response);
@@ -112,7 +94,7 @@ export class AuthController {
   @Get('me')
   @HttpCode(HttpStatus.OK)
   async getCurrentUser(
-    @Req() req: RequestWithJwtUser,
+    @Req() req: RequestWithUser,
   ): Promise<{ user: User }> {
     const user = await this.authService.getCurrentUser(req.user.userId);
     return { user };
