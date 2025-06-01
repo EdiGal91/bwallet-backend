@@ -14,6 +14,8 @@ import { CreateWorkspaceDto } from './dto/create-workspace.dto';
 import { WorkspaceMembersService } from '../workspace-members/workspace-members.service';
 import { UsersService } from '../users/users.service';
 import { InviteMemberDto } from '../workspace-members/dto/invite-member.dto';
+import { WorkspaceMember } from '../workspace-members/schemas/workspace-member.schema';
+import { WorkspaceWithMembers } from './types';
 
 @Injectable()
 export class WorkspacesService {
@@ -58,7 +60,7 @@ export class WorkspacesService {
   }
   /* eslint-enable */
 
-  async findOne(workspaceId: string): Promise<Workspace> {
+  async findOne(workspaceId: string): Promise<WorkspaceWithMembers> {
     // Find the workspace by ID
     const workspace = await this.workspaceModel.findById(workspaceId).exec();
 
@@ -66,7 +68,15 @@ export class WorkspacesService {
       throw new NotFoundException(`Workspace with ID ${workspaceId} not found`);
     }
 
-    return workspace;
+    // Get workspace members
+    const members = await this.workspaceMembersService.findMembersByWorkspace(workspaceId);
+
+    // Convert to plain object and add members
+    const workspaceObj = workspace.toJSON();
+    return {
+      ...workspaceObj,
+      members,
+    } as WorkspaceWithMembers;
   }
 
   async findById(workspaceId: string): Promise<Workspace> {

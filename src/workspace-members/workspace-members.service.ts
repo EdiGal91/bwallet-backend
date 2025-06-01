@@ -161,7 +161,7 @@ export class WorkspaceMembersService {
   ): Promise<WorkspaceMember[]> {
     return this.workspaceMemberModel
       .find({ workspace: workspaceId })
-      .populate('user', 'email')
+      .populate('user', ['email', 'firstName', 'lastName'])
       .exec();
   }
 
