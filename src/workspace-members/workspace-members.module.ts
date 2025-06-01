@@ -1,7 +1,6 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { WorkspaceMembersService } from './workspace-members.service';
-import { WorkspaceMembersController } from './workspace-members.controller';
 import {
   WorkspaceMember,
   WorkspaceMemberSchema,
@@ -19,7 +18,6 @@ import { ConfigModule } from '@nestjs/config';
     UsersModule,
     ConfigModule,
   ],
-  controllers: [WorkspaceMembersController],
   providers: [WorkspaceMembersService],
   exports: [WorkspaceMembersService],
 })

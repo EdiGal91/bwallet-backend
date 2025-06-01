@@ -4,6 +4,7 @@ import { WorkspacesService } from './workspaces.service';
 import { WorkspacesController } from './workspaces.controller';
 import { Workspace, WorkspaceSchema } from './schemas/workspace.schema';
 import { WorkspaceMembersModule } from '../workspace-members/workspace-members.module';
+import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
@@ -11,6 +12,7 @@ import { WorkspaceMembersModule } from '../workspace-members/workspace-members.m
       { name: Workspace.name, schema: WorkspaceSchema },
     ]),
     forwardRef(() => WorkspaceMembersModule),
+    UsersModule,
   ],
   controllers: [WorkspacesController],
   providers: [WorkspacesService],

@@ -32,8 +32,8 @@ export class WorkspaceMember {
 
   @Prop({
     type: String,
-    enum: ['owner', 'admin', 'member', 'viewer'],
-    default: 'member',
+    required: true,
+    enum: ['owner', 'admin', 'viewer'],
   })
   role: string;
 

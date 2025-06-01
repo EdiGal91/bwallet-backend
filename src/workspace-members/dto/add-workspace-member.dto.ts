@@ -6,8 +6,8 @@ export class AddWorkspaceMemberDto {
   userId: string;
 
   @IsOptional()
-  @IsEnum(['admin', 'member', 'viewer'], {
-    message: 'Role must be one of: admin, member, viewer',
+  @IsEnum(['admin', 'viewer'], {
+    message: 'Role must be one of: admin, viewer',
   })
   role?: string;
 }

@@ -4,12 +4,16 @@ import {
   Inject,
   forwardRef,
   UnauthorizedException,
+  ForbiddenException,
+  ConflictException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Workspace, WorkspaceDocument } from './schemas/workspace.schema';
 import { CreateWorkspaceDto } from './dto/create-workspace.dto';
 import { WorkspaceMembersService } from '../workspace-members/workspace-members.service';
+import { UsersService } from '../users/users.service';
+import { InviteMemberDto } from '../workspace-members/dto/invite-member.dto';
 
 @Injectable()
 export class WorkspacesService {
@@ -18,6 +22,7 @@ export class WorkspacesService {
     private workspaceModel: Model<WorkspaceDocument>,
     @Inject(forwardRef(() => WorkspaceMembersService))
     private workspaceMembersService: WorkspaceMembersService,
+    private usersService: UsersService,
   ) {}
 
   async create(
@@ -53,21 +58,21 @@ export class WorkspacesService {
   }
   /* eslint-enable */
 
-  async findOne(id: string): Promise<Workspace> {
+  async findOne(workspaceId: string): Promise<Workspace> {
     // Find the workspace by ID
-    const workspace = await this.workspaceModel.findById(id).exec();
+    const workspace = await this.workspaceModel.findById(workspaceId).exec();
 
     if (!workspace) {
-      throw new NotFoundException(`Workspace with ID ${id} not found`);
+      throw new NotFoundException(`Workspace with ID ${workspaceId} not found`);
     }
 
     return workspace;
   }
 
-  async findById(id: string): Promise<Workspace> {
-    const workspace = await this.workspaceModel.findById(id).exec();
+  async findById(workspaceId: string): Promise<Workspace> {
+    const workspace = await this.workspaceModel.findById(workspaceId).exec();
     if (!workspace) {
-      throw new NotFoundException(`Workspace with ID ${id} not found`);
+      throw new NotFoundException(`Workspace with ID ${workspaceId} not found`);
     }
     return workspace;
   }
@@ -91,7 +96,7 @@ export class WorkspacesService {
       }
 
       // Check role hierarchy
-      const roles = ['owner', 'admin', 'member', 'viewer'];
+      const roles = ['owner', 'admin', 'viewer'];
       const userRoleIndex = roles.indexOf(member.role);
       const requiredRoleIndex = roles.indexOf(requiredRole);
 
@@ -104,9 +109,9 @@ export class WorkspacesService {
   }
   /* eslint-enable */
 
-  async update(id: string, name: string, userId: string): Promise<Workspace> {
+  async update(workspaceId: string, name: string, userId: string): Promise<Workspace> {
     // Check if user is owner or admin
-    const hasPermission = await this.checkUserRole(id, userId, 'admin');
+    const hasPermission = await this.checkUserRole(workspaceId, userId, 'admin');
 
     if (!hasPermission) {
       throw new UnauthorizedException(
@@ -115,24 +120,24 @@ export class WorkspacesService {
     }
 
     const workspace = await this.workspaceModel.findOneAndUpdate(
-      { _id: id },
+      { _id: workspaceId },
       { name },
       { new: true },
     );
 
     if (!workspace) {
-      throw new NotFoundException(`Workspace with ID ${id} not found`);
+      throw new NotFoundException(`Workspace with ID ${workspaceId} not found`);
     }
 
     return workspace;
   }
 
   async remove(
-    id: string,
+    workspaceId: string,
     userId: string,
   ): Promise<{ deleted: boolean; membersRemoved: number }> {
     // Check if user is owner
-    const isOwner = await this.checkUserRole(id, userId, 'owner');
+    const isOwner = await this.checkUserRole(workspaceId, userId, 'owner');
 
     if (!isOwner) {
       throw new UnauthorizedException(
@@ -141,23 +146,54 @@ export class WorkspacesService {
     }
 
     // First check if the workspace exists
-    const workspace = await this.workspaceModel.findById(id);
+    const workspace = await this.workspaceModel.findById(workspaceId);
 
     if (!workspace) {
-      throw new NotFoundException(`Workspace with ID ${id} not found`);
+      throw new NotFoundException(`Workspace with ID ${workspaceId} not found`);
     }
 
     // Remove all members associated with this workspace
     const membersRemoved =
-      await this.workspaceMembersService.removeAllMembersByWorkspace(id);
+      await this.workspaceMembersService.removeAllMembersByWorkspace(workspaceId);
 
     // Now delete the workspace
-    const result = await this.workspaceModel.deleteOne({ _id: id });
+    const result = await this.workspaceModel.deleteOne({ _id: workspaceId });
 
     if (result.deletedCount === 0) {
-      throw new NotFoundException(`Workspace with ID ${id} not found`);
+      throw new NotFoundException(`Workspace with ID ${workspaceId} not found`);
     }
 
     return { deleted: true, membersRemoved };
+  }
+
+  async inviteMember(workspaceId: string, inviteDto: InviteMemberDto, inviterId: string) {
+    // First check if the workspace exists and the inviter is a member
+    const workspace = await this.workspaceModel.findById(workspaceId);
+    if (!workspace) {
+      throw new NotFoundException('Workspace not found');
+    }
+
+    // Check if inviter is a member
+    const inviterMember = await this.workspaceMembersService.findMember(workspaceId, inviterId);
+    if (!inviterMember) {
+      throw new ForbiddenException('You are not a member of this workspace');
+    }
+
+    // Find or create user by email
+    let user = await this.usersService.findByEmail(inviteDto.email);
+    if (!user) {
+      // User doesn't exist
+      // 
+      throw new NotFoundException('User not found');
+    }
+
+    // Check if user is already a member
+    const existingMember = await this.workspaceMembersService.findMember(workspaceId, user.id);
+    if (existingMember) {
+      throw new ConflictException('User is already a member of this workspace');
+    }
+
+    // Add the user as a member
+    return this.workspaceMembersService.addMember(workspaceId, { userId: user.id, role: inviteDto.role }, inviterId);
   }
 }

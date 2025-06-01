@@ -11,6 +11,7 @@ import {
   Inject,
   Delete,
   NotFoundException,
+  Request,
 } from '@nestjs/common';
 import { WorkspacesService } from './workspaces.service';
 import { CreateWorkspaceDto } from './dto/create-workspace.dto';
@@ -18,6 +19,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { WorkspaceMembersService } from '../workspace-members/workspace-members.service';
 import { Workspace } from './schemas/workspace.schema';
 import { RequestWithUser } from '../common/types/request.types';
+import { InviteMemberDto } from '../workspace-members/dto/invite-member.dto';
 
 @Controller('workspaces')
 @UseGuards(JwtAuthGuard)
@@ -94,13 +96,13 @@ export class WorkspacesController {
 
     // Get workspace details for each workspace where user is a member
     const memberWorkspaces = await Promise.all(
-      memberWorkspaceIds.map(async (id) => {
+      memberWorkspaceIds.map(async (workspaceId) => {
         try {
           // User is a verified member, so we can fetch the workspace
-          const workspace = await this.workspacesService.findOne(id);
+          const workspace = await this.workspacesService.findOne(workspaceId);
           return workspace;
         } catch (error) {
-          console.error(`Error fetching workspace ${id}:`, error);
+          console.error(`Error fetching workspace ${workspaceId}:`, error);
           return null;
         }
       }),
@@ -127,18 +129,18 @@ export class WorkspacesController {
     return result;
   }
 
-  @Get(':id')
-  async findOne(@Param('id') id: string, @Req() req: RequestWithUser) {
+  @Get(':workspaceId')
+  async findOne(@Param('workspaceId') workspaceId: string, @Req() req: RequestWithUser) {
     const userId = req.user.userId;
 
     // First get the workspace
-    const workspace = await this.workspacesService.findOne(id);
+    const workspace = await this.workspacesService.findOne(workspaceId);
 
     // Check if user is authorized to access this workspace
     const memberWorkspaceIds =
       await this.workspaceMembersService.findWorkspacesByUser(userId);
 
-    if (!memberWorkspaceIds.includes(id)) {
+    if (!memberWorkspaceIds.includes(workspaceId)) {
       throw new NotFoundException(
         `Workspace not found or you don't have access to it`,
       );
@@ -147,37 +149,30 @@ export class WorkspacesController {
     return workspace;
   }
 
-  // This endpoint is deprecated - use workspace-members endpoints instead
-  @Post(':id/members/:memberId')
-  async addMember(
-    @Param('id') id: string,
-    @Param('memberId') memberId: string,
-    @Req() req: RequestWithUser,
+  @Post(':workspaceId/invite')
+  async inviteMember(
+    @Param('workspaceId') workspaceId: string,
+    @Body() inviteDto: InviteMemberDto,
+    @Request() req: any,
   ) {
-    const userId = req.user.userId;
-    // Add member through the workspace members service instead
-    return this.workspaceMembersService.addMember(
-      id,
-      { userId: memberId },
-      userId,
-    );
+    return this.workspacesService.inviteMember(workspaceId, inviteDto, req.user.userId);
   }
 
-  @Patch(':id')
+  @Patch(':workspaceId')
   async update(
-    @Param('id') id: string,
+    @Param('workspaceId') workspaceId: string,
     @Body('name') name: string,
     @Req() req: RequestWithUser,
   ) {
     const userId = req.user.userId;
-    const updated = await this.workspacesService.update(id, name, userId);
+    const updated = await this.workspacesService.update(workspaceId, name, userId);
     return updated;
   }
 
-  @Delete(':id')
-  async remove(@Param('id') id: string, @Req() req: RequestWithUser) {
+  @Delete(':workspaceId')
+  async remove(@Param('workspaceId') workspaceId: string, @Req() req: RequestWithUser) {
     const userId = req.user.userId;
-    const result = await this.workspacesService.remove(id, userId);
+    const result = await this.workspacesService.remove(workspaceId, userId);
     return result;
   }
 }

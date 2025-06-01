@@ -73,7 +73,7 @@ export class WorkspaceMembersService {
     }
 
     // Check role hierarchy
-    const roles = ['owner', 'admin', 'member', 'viewer'];
+    const roles = ['owner', 'admin', 'viewer'];
     const userRoleIndex = roles.indexOf(member.role);
     const requiredRoleIndex = roles.indexOf(requiredRole);
 
@@ -146,7 +146,7 @@ export class WorkspaceMembersService {
     const newMembership = new this.workspaceMemberModel({
       workspace: workspaceId,
       user: addMemberDto.userId,
-      role: addMemberDto.role || 'member',
+      role: addMemberDto.role,
       joinedAt: new Date(),
     });
 
@@ -292,5 +292,12 @@ export class WorkspaceMembersService {
     });
 
     return result.deletedCount;
+  }
+
+  async findMember(workspaceId: string, userId: string) {
+    return this.workspaceMemberModel.findOne({
+      workspace: workspaceId,
+      user: userId,
+    });
   }
 }
