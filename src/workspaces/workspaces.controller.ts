@@ -44,12 +44,7 @@ export class WorkspacesController {
       userId,
     );
 
-    // Get the workspace ID safely
-    const workspaceId = workspace?.id || workspace?.['_id']?.toString();
-
-    if (!workspaceId) {
-      throw new Error('Failed to get workspace ID after creation');
-    }
+    const workspaceId = workspace.id!;
 
     // Add the creator as an owner member to the workspace
     try {

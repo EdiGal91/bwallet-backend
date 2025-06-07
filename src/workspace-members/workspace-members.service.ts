@@ -95,33 +95,16 @@ export class WorkspaceMembersService {
       throw new NotFoundException(`Workspace with ID ${workspaceId} not found`);
     }
 
-    // Check if this is the first member being added (likely the creator/owner)
-    const existingMembers = await this.findMembersByWorkspace(workspaceId);
-    const isFirstMember = existingMembers.length === 0;
-
-    // If this is not the first member, check permissions
-    if (!isFirstMember) {
-      // Check if requester has owner or admin role
-      const hasPermission = await this.checkUserPermission(
-        workspaceId,
-        requesterId,
-        'admin',
+    // Check if requester has owner or admin role
+    const hasPermission = await this.checkUserPermission(
+      workspaceId,
+      requesterId,
+      'admin',
+    );
+    if (!hasPermission) {
+      throw new NotFoundException(
+        'Only workspace owners and admins can add members',
       );
-      if (!hasPermission) {
-        throw new NotFoundException(
-          'Only workspace owners and admins can add members',
-        );
-      }
-    } else {
-      // For the first member, we only allow them to be added as owner and they must be the requester
-      if (
-        addMemberDto.role !== 'owner' ||
-        addMemberDto.userId !== requesterId
-      ) {
-        throw new NotFoundException(
-          'The first member added must be the creator as owner',
-        );
-      }
     }
 
     // Verify the user exists

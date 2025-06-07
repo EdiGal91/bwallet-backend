@@ -189,21 +189,20 @@ export class WorkspacesService {
       throw new ForbiddenException('You are not a member of this workspace');
     }
 
-    // Find or create user by email
+    // Find user by email
     let user = await this.usersService.findByEmail(inviteDto.email);
-    if (!user) {
-      // User doesn't exist
-      // 
-      throw new NotFoundException('User not found');
+    if (user) {
+      // Check if user is already a member
+      const existingMember = await this.workspaceMembersService.findMember(workspaceId, user.id);
+      if (existingMember) {
+        throw new ConflictException('User is already a member of this workspace');
+      }
+  
+      // Add the user as a member
+      return this.workspaceMembersService.addMember(workspaceId, { userId: user.id, role: inviteDto.role }, inviterId);
     }
+    // invited new user
+    throw new NotFoundException('User not found');
 
-    // Check if user is already a member
-    const existingMember = await this.workspaceMembersService.findMember(workspaceId, user.id);
-    if (existingMember) {
-      throw new ConflictException('User is already a member of this workspace');
-    }
-
-    // Add the user as a member
-    return this.workspaceMembersService.addMember(workspaceId, { userId: user.id, role: inviteDto.role }, inviterId);
   }
 }
