@@ -448,6 +448,41 @@ export class WorkspaceMembersService {
   }
 
   /**
+   * Cancel a workspace invitation
+   * Only the admin who created the invitation or the workspace owner can cancel it
+   */
+  async cancelInvitation(token: string, userId: string): Promise<void> {
+    // Find the invitation
+    const invitation = await this.workspaceInvitationModel.findOne({
+      token,
+      status: InvitationStatus.PENDING,
+    });
+
+    if (!invitation) {
+      throw new NotFoundException('Invalid or expired invitation');
+    }
+
+    // Get the workspace ID from the invitation
+    const workspaceId = invitation.workspace.toString();
+
+    // Check if user is the workspace owner
+    const isOwner = await this.checkUserPermission(workspaceId, userId, 'owner');
+
+    // If not owner, check if user is the admin who created the invitation
+    if (!isOwner) {
+      if (invitation.inviter.toString() !== userId) {
+        throw new ForbiddenException(
+          'Only the admin who created the invitation or the workspace owner can cancel it',
+        );
+      }
+    }
+
+    // Mark invitation as cancelled
+    invitation.status = InvitationStatus.CANCELLED;
+    await invitation.save();
+  }
+
+  /**
    * Get invitation details by token
    */
   async getInvitationByToken(token: string, userId: string) {

@@ -169,6 +169,14 @@ export class WorkspacesController {
     return this.workspaceMembersService.declineInvitation(acceptInvitationDto.token, req.user.userId);
   }
 
+  @Post('cancel-invitation')
+  async cancelInvitation(
+    @Body() acceptInvitationDto: AcceptInvitationDto,
+    @Req() req: RequestWithUser,
+  ) {
+    return this.workspaceMembersService.cancelInvitation(acceptInvitationDto.token, req.user.userId);
+  }
+
   @Get('invitation/:token')
   async getInvitationDetails(
     @Param('token') token: string,
