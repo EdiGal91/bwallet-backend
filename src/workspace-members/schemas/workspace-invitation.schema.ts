@@ -9,8 +9,24 @@ export enum InvitationStatus {
   CANCELLED = 'cancelled',
 }
 
-@Schema({ timestamps: true, collection: 'workspace_invitations' })
+@Schema({ 
+  timestamps: true, 
+  collection: 'workspace_invitations',
+  toJSON: {
+    virtuals: true,
+    transform: (_, ret) => {
+      if (ret._id) {
+        ret.id = ret._id.toString();
+      }
+      delete ret._id;
+      delete ret.__v;
+      return ret;
+    },
+  },
+})
 export class WorkspaceInvitation extends Document {
+  declare id?: string;
+
   @Prop({ type: Types.ObjectId, ref: 'Workspace', required: true })
   workspace: Types.ObjectId;
 
