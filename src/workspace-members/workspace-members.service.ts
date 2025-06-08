@@ -205,7 +205,7 @@ export class WorkspaceMembersService {
   /**
    * Accept a workspace invitation
    */
-  async acceptInvitation(token: string): Promise<WorkspaceMember> {
+  async acceptInvitation(token: string, userId: string): Promise<WorkspaceMember> {
     // Find the invitation without expiry check
     const invitation = await this.workspaceInvitationModel.findOne({
       token,
@@ -214,6 +214,11 @@ export class WorkspaceMembersService {
 
     if (!invitation) {
       throw new NotFoundException('Invalid or expired invitation');
+    }
+
+    // Verify the user matches the invitation
+    if (invitation.user.toString() !== userId) {
+      throw new ForbiddenException('This invitation was sent to a different user');
     }
 
     // Check if invitation has expired
@@ -234,6 +239,37 @@ export class WorkspaceMembersService {
     await invitation.save();
 
     return membership;
+  }
+
+  /**
+   * Decline a workspace invitation
+   */
+  async declineInvitation(token: string, userId: string): Promise<void> {
+    // Find the invitation without expiry check
+    const invitation = await this.workspaceInvitationModel.findOne({
+      token,
+      status: InvitationStatus.PENDING,
+    });
+
+    if (!invitation) {
+      throw new NotFoundException('Invalid or expired invitation');
+    }
+
+    // Verify the user matches the invitation
+    if (invitation.user.toString() !== userId) {
+      throw new ForbiddenException('This invitation was sent to a different user');
+    }
+
+    // Check if invitation has expired
+    if (invitation.expiresAt < new Date()) {
+      invitation.status = InvitationStatus.EXPIRED;
+      await invitation.save();
+      throw new NotFoundException('Invitation has expired');
+    }
+
+    // Mark invitation as declined
+    invitation.status = InvitationStatus.DECLINED;
+    await invitation.save();
   }
 
   /**
@@ -409,5 +445,33 @@ export class WorkspaceMembersService {
     });
 
     return result.deletedCount;
+  }
+
+  /**
+   * Get invitation details by token
+   */
+  async getInvitationByToken(token: string, userId: string) {
+    const invitation = await this.workspaceInvitationModel
+      .findOne({ token })
+      .populate('workspace', ['name'])
+      .populate('inviter', ['email', 'firstName', 'lastName'])
+      .exec();
+
+    if (!invitation) {
+      throw new NotFoundException('Invitation not found');
+    }
+
+    // Verify the user matches the invitation
+    if (invitation.user.toString() !== userId) {
+      throw new ForbiddenException('This invitation was sent to a different user');
+    }
+
+    // Check if invitation has expired
+    if (invitation.expiresAt < new Date()) {
+      invitation.status = InvitationStatus.EXPIRED;
+      await invitation.save();
+    }
+
+    return invitation;
   }
 }

@@ -158,7 +158,23 @@ export class WorkspacesController {
     @Body() acceptInvitationDto: AcceptInvitationDto,
     @Req() req: RequestWithUser,
   ) {
-    return this.workspaceMembersService.acceptInvitation(acceptInvitationDto.token);
+    return this.workspaceMembersService.acceptInvitation(acceptInvitationDto.token, req.user.userId);
+  }
+
+  @Post('decline-invitation')
+  async declineInvitation(
+    @Body() acceptInvitationDto: AcceptInvitationDto,
+    @Req() req: RequestWithUser,
+  ) {
+    return this.workspaceMembersService.declineInvitation(acceptInvitationDto.token, req.user.userId);
+  }
+
+  @Get('invitation/:token')
+  async getInvitationDetails(
+    @Param('token') token: string,
+    @Req() req: RequestWithUser,
+  ) {
+    return this.workspaceMembersService.getInvitationByToken(token, req.user.userId);
   }
 
   @Patch(':workspaceId')
