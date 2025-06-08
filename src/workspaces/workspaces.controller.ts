@@ -20,6 +20,7 @@ import { WorkspaceMembersService } from '../workspace-members/workspace-members.
 import { Workspace } from './schemas/workspace.schema';
 import { RequestWithUser } from '../common/types/request.types';
 import { InviteMemberDto } from '../workspace-members/dto/invite-member.dto';
+import { AcceptInvitationDto } from '../workspace-members/dto/accept-invitation.dto';
 
 @Controller('workspaces')
 @UseGuards(JwtAuthGuard)
@@ -150,6 +151,14 @@ export class WorkspacesController {
     @Request() req: any,
   ) {
     return this.workspacesService.inviteMember(workspaceId, inviteDto, req.user.userId);
+  }
+
+  @Post('accept-invitation')
+  async acceptInvitation(
+    @Body() acceptInvitationDto: AcceptInvitationDto,
+    @Req() req: RequestWithUser,
+  ) {
+    return this.workspaceMembersService.acceptInvitation(acceptInvitationDto.token);
   }
 
   @Patch(':workspaceId')
