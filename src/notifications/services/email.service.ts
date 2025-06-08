@@ -54,4 +54,50 @@ export class EmailService {
       throw new Error('Failed to send verification email');
     }
   }
+
+  async sendWorkspaceInvitationEmail(
+    email: string,
+    workspaceName: string,
+    inviterName: string,
+    role: string,
+    token: string,
+  ): Promise<void> {
+    try {
+      const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:5173';
+      const acceptLink = `${frontendUrl}/workspaces/accept-invitation?token=${token}`;
+
+      const { data, error } = await this.resend.emails.send({
+        from: 'BWallet <delivered@resend.dev>',
+        to: email,
+        subject: `You've been invited to join ${workspaceName} on BWallet`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #4f46e5;">Workspace Invitation</h2>
+            <p>${inviterName} has invited you to join their workspace "${workspaceName}" on BWallet.</p>
+            <p>Your role will be: <strong>${role}</strong></p>
+            <div style="margin: 30px 0;">
+              <a href="${acceptLink}" 
+                 style="background-color: #4f46e5; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
+                Accept Invitation
+              </a>
+            </div>
+            <p>If the button above doesn't work, you can also click on the link below or copy it into your web browser:</p>
+            <p style="word-break: break-all; color: #3b82f6;">
+              <a href="${acceptLink}" style="color: #3b82f6;">${acceptLink}</a>
+            </p>
+            <p>This invitation will expire in 7 days.</p>
+            <p>If you did not expect this invitation, you can safely ignore this email.</p>
+          </div>
+        `,
+      });
+
+      if (error) {
+        console.error('Failed to send workspace invitation email:', error);
+        throw new Error(`Failed to send workspace invitation email: ${error.message}`);
+      }
+    } catch (error) {
+      console.error('Error sending workspace invitation email:', error);
+      throw new Error('Failed to send workspace invitation email');
+    }
+  }
 }

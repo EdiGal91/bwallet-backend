@@ -69,4 +69,28 @@ export class NotificationsService {
       await Promise.resolve();
     }
   }
+
+  /**
+   * Send workspace invitation notification
+   */
+  async sendWorkspaceInvitationNotification(
+    email: string,
+    workspaceName: string,
+    inviterName: string,
+    role: string,
+    token: string,
+    options: NotificationOptions = {},
+  ): Promise<void> {
+    const channels = options.channels || ['email'];
+
+    if (channels.includes('email')) {
+      await this.emailService.sendWorkspaceInvitationEmail(
+        email,
+        workspaceName,
+        inviterName,
+        role,
+        token,
+      );
+    }
+  }
 }

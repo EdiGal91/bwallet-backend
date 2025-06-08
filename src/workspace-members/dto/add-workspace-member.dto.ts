@@ -1,13 +1,11 @@
-import { IsEnum, IsMongoId, IsNotEmpty, IsOptional } from 'class-validator';
+import { IsNotEmpty, IsEnum } from 'class-validator';
 
 export class AddWorkspaceMemberDto {
   @IsNotEmpty()
-  @IsMongoId()
   userId: string;
 
-  @IsOptional()
-  @IsEnum(['admin', 'viewer'], {
-    message: 'Role must be one of: admin, viewer',
+  @IsEnum(['admin', 'viewer', 'owner'], {
+    message: 'Role must be one of: admin, viewer, owner',
   })
-  role?: string;
+  role: string;
 }

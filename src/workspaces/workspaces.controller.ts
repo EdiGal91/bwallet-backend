@@ -50,8 +50,7 @@ export class WorkspacesController {
     try {
       await this.workspaceMembersService.addMember(
         workspaceId,
-        { userId, role: 'owner' },
-        userId,
+        { userId, role: 'owner' }
       );
     } catch (error) {
       console.error('Error adding creator as owner:', error);

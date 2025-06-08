@@ -1,6 +1,8 @@
 import { Workspace } from './schemas/workspace.schema';
 import { WorkspaceMember } from '../workspace-members/schemas/workspace-member.schema';
+import { WorkspaceInvitation } from '../workspace-members/schemas/workspace-invitation.schema';
 
-export interface WorkspaceWithMembers extends Omit<Workspace, 'members'> {
+export type WorkspaceWithMembers = Workspace & {
   members: WorkspaceMember[];
-} 
+  pendingInvitations: WorkspaceInvitation[];
+}; 

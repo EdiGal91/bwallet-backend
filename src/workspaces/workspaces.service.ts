@@ -71,11 +71,15 @@ export class WorkspacesService {
     // Get workspace members
     const members = await this.workspaceMembersService.findMembersByWorkspace(workspaceId);
 
-    // Convert to plain object and add members
+    // Get pending invitations
+    const pendingInvitations = await this.workspaceMembersService.findPendingInvitationsByWorkspace(workspaceId);
+
+    // Convert to plain object and add members and pending invitations
     const workspaceObj = workspace.toJSON();
     return {
       ...workspaceObj,
       members,
+      pendingInvitations,
     } as WorkspaceWithMembers;
   }
 
@@ -145,7 +149,7 @@ export class WorkspacesService {
   async remove(
     workspaceId: string,
     userId: string,
-  ): Promise<{ deleted: boolean; membersRemoved: number }> {
+  ): Promise<{ deleted: boolean; membersRemoved: number; invitationsRemoved: number }> {
     // Check if user is owner
     const isOwner = await this.checkUserRole(workspaceId, userId, 'owner');
 
@@ -166,6 +170,10 @@ export class WorkspacesService {
     const membersRemoved =
       await this.workspaceMembersService.removeAllMembersByWorkspace(workspaceId);
 
+    // Remove all pending invitations
+    const invitationsRemoved =
+      await this.workspaceMembersService.removeAllPendingInvitationsByWorkspace(workspaceId);
+
     // Now delete the workspace
     const result = await this.workspaceModel.deleteOne({ _id: workspaceId });
 
@@ -173,7 +181,7 @@ export class WorkspacesService {
       throw new NotFoundException(`Workspace with ID ${workspaceId} not found`);
     }
 
-    return { deleted: true, membersRemoved };
+    return { deleted: true, membersRemoved, invitationsRemoved };
   }
 
   async inviteMember(workspaceId: string, inviteDto: InviteMemberDto, inviterId: string) {
@@ -197,12 +205,15 @@ export class WorkspacesService {
       if (existingMember) {
         throw new ConflictException('User is already a member of this workspace');
       }
-  
-      // Add the user as a member
-      return this.workspaceMembersService.addMember(workspaceId, { userId: user.id, role: inviteDto.role }, inviterId);
+
+      // Add the user as a member using inviteMember which includes email notification
+      return this.workspaceMembersService.inviteMember(
+        workspaceId,
+        { email: user.email, role: inviteDto.role },
+        inviterId
+      );
     }
     // invited new user
     throw new NotFoundException('User not found');
-
   }
 }

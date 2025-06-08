@@ -4,25 +4,36 @@ import {
   ConflictException,
   Inject,
   forwardRef,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
+import { v4 as uuidv4 } from 'uuid';
 import {
   WorkspaceMember,
   WorkspaceMemberDocument,
 } from './schemas/workspace-member.schema';
+import {
+  WorkspaceInvitation,
+} from './schemas/workspace-invitation.schema';
 import { WorkspacesService } from '../workspaces/workspaces.service';
 import { UsersService } from '../users/users.service';
 import { AddWorkspaceMemberDto } from './dto/add-workspace-member.dto';
+import { InviteMemberDto } from './dto/invite-member.dto';
+import { NotificationsService } from '../notifications/services/notifications.service';
+import { InvitationStatus } from './schemas/workspace-invitation.schema';
 
 @Injectable()
 export class WorkspaceMembersService {
   constructor(
     @InjectModel(WorkspaceMember.name)
     private workspaceMemberModel: Model<WorkspaceMemberDocument>,
+    @InjectModel(WorkspaceInvitation.name)
+    private workspaceInvitationModel: Model<WorkspaceInvitation>,
     @Inject(forwardRef(() => WorkspacesService))
     private workspacesService: WorkspacesService,
     private usersService: UsersService,
+    private notificationsService: NotificationsService,
   ) {}
 
   /**
@@ -82,49 +93,13 @@ export class WorkspaceMembersService {
   }
 
   /**
-   * Add a user as a member to a workspace
+   * Add a member to a workspace without validation checks
+   * Used when creating a new workspace and adding the creator as owner
    */
   async addMember(
     workspaceId: string,
     addMemberDto: AddWorkspaceMemberDto,
-    requesterId: string,
   ): Promise<WorkspaceMember> {
-    // Verify the workspace exists
-    const workspace = await this.workspacesService.findById(workspaceId);
-    if (!workspace) {
-      throw new NotFoundException(`Workspace with ID ${workspaceId} not found`);
-    }
-
-    // Check if requester has owner or admin role
-    const hasPermission = await this.checkUserPermission(
-      workspaceId,
-      requesterId,
-      'admin',
-    );
-    if (!hasPermission) {
-      throw new NotFoundException(
-        'Only workspace owners and admins can add members',
-      );
-    }
-
-    // Verify the user exists
-    const user = await this.usersService.findById(addMemberDto.userId);
-    if (!user) {
-      throw new NotFoundException(
-        `User with ID ${addMemberDto.userId} not found`,
-      );
-    }
-
-    // Check if the member is already in the workspace
-    const existingMembership = await this.workspaceMemberModel.findOne({
-      workspace: workspaceId,
-      user: addMemberDto.userId,
-    });
-
-    if (existingMembership) {
-      throw new ConflictException('User is already a member of this workspace');
-    }
-
     // Create the new membership
     const newMembership = new this.workspaceMemberModel({
       workspace: workspaceId,
@@ -134,6 +109,131 @@ export class WorkspaceMembersService {
     });
 
     return newMembership.save();
+  }
+
+  /**
+   * Invite a member to a workspace with full validation
+   * Used when inviting existing users to a workspace
+   */
+  async inviteMember(
+    workspaceId: string,
+    inviteDto: InviteMemberDto,
+    inviterId: string,
+  ): Promise<void> {
+    // Verify the workspace exists
+    const workspace = await this.workspacesService.findById(workspaceId);
+    if (!workspace) {
+      throw new NotFoundException(`Workspace with ID ${workspaceId} not found`);
+    }
+
+    // Check if inviter has admin or owner role
+    const hasPermission = await this.checkUserPermission(
+      workspaceId,
+      inviterId,
+      'admin',
+    );
+    if (!hasPermission) {
+      throw new ForbiddenException(
+        'Only workspace owners and admins can invite members',
+      );
+    }
+
+    // Find user by email
+    const user = await this.usersService.findByEmail(inviteDto.email);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Check if user is already a member
+    const existingMember = await this.workspaceMemberModel.findOne({
+      workspace: workspaceId,
+      user: user.id,
+    });
+
+    if (existingMember) {
+      throw new ConflictException('User is already a member of this workspace');
+    }
+
+    // Check for existing pending invitation
+    const existingInvitation = await this.workspaceInvitationModel.findOne({
+      workspace: workspaceId,
+      user: user.id,
+      status: InvitationStatus.PENDING,
+      expiresAt: { $gt: new Date() },
+    });
+
+    if (existingInvitation) {
+      throw new ConflictException('User already has a pending invitation');
+    }
+
+    // Generate invitation token
+    const token = uuidv4();
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7); // 7 days expiry
+
+    // Create invitation
+    const invitation = new this.workspaceInvitationModel({
+      workspace: workspaceId,
+      user: user.id,
+      inviter: inviterId,
+      role: inviteDto.role,
+      token,
+      expiresAt,
+    });
+
+    await invitation.save();
+
+    // Get inviter's user details for the invitation email
+    const inviter = await this.usersService.findById(inviterId);
+    if (!inviter) {
+      throw new NotFoundException(`Inviter with ID ${inviterId} not found`);
+    }
+    const inviterName = inviter.firstName && inviter.lastName 
+      ? `${inviter.firstName} ${inviter.lastName}`
+      : inviter.email;
+
+    // Send invitation email
+    await this.notificationsService.sendWorkspaceInvitationNotification(
+      user.email,
+      workspace.name,
+      inviterName,
+      inviteDto.role,
+      token,
+    );
+  }
+
+  /**
+   * Accept a workspace invitation
+   */
+  async acceptInvitation(token: string): Promise<WorkspaceMember> {
+    // Find the invitation without expiry check
+    const invitation = await this.workspaceInvitationModel.findOne({
+      token,
+      status: InvitationStatus.PENDING,
+    });
+
+    if (!invitation) {
+      throw new NotFoundException('Invalid or expired invitation');
+    }
+
+    // Check if invitation has expired
+    if (invitation.expiresAt < new Date()) {
+      invitation.status = InvitationStatus.EXPIRED;
+      await invitation.save();
+      throw new NotFoundException('Invitation has expired');
+    }
+
+    // Create the membership
+    const membership = await this.addMember(invitation.workspace.toString(), {
+      userId: invitation.user.toString(),
+      role: invitation.role,
+    });
+
+    // Mark invitation as accepted
+    invitation.status = InvitationStatus.ACCEPTED;
+    await invitation.save();
+
+    return membership;
   }
 
   /**
@@ -282,5 +382,32 @@ export class WorkspaceMembersService {
       workspace: workspaceId,
       user: userId,
     });
+  }
+
+  /**
+   * Find all pending invitations for a workspace
+   */
+  async findPendingInvitationsByWorkspace(workspaceId: string) {
+    const result= await this.workspaceInvitationModel
+      .find({ 
+        workspace: workspaceId,
+        status: InvitationStatus.PENDING,
+        expiresAt: { $gt: new Date() }
+      })
+      .populate('user', ['email', 'firstName', 'lastName'])
+      .populate('inviter', ['email', 'firstName', 'lastName'])
+      .exec();
+    return result;
+  }
+
+  /**
+   * Remove all pending invitations from a workspace
+   */
+  async removeAllPendingInvitationsByWorkspace(workspaceId: string): Promise<number> {
+    const result = await this.workspaceInvitationModel.deleteMany({
+      workspace: workspaceId,
+    });
+
+    return result.deletedCount;
   }
 }
