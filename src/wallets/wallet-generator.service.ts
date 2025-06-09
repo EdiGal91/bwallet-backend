@@ -7,7 +7,7 @@ export interface GeneratedWallet {
   address: string;
   publicKey: string;
   privateKey: string;
-  mnemonic?: string;
+  bip39Mnemonic?: string;
   derivationPath?: string;
   extendedKey?: string;
   walletType: WalletType;
@@ -18,16 +18,23 @@ export class WalletGeneratorService {
   private readonly logger = new Logger(WalletGeneratorService.name);
 
   /**
-   * Generate a main wallet for a specific network
-   * EVM-compatible chains (Ethereum and Polygon)
+   * Generate a new BIP39 mnemonic
    */
-  generateMainWallet(networkId: string) {
-    this.logger.debug(`Generating main wallet for network ${networkId}`);
+  generateBIP39Mnemonic(): string {
+    return bip39.generateMnemonic();
+  }
 
-    // Generate a random mnemonic (recovery phrase)
-    const mnemonic = bip39.generateMnemonic();
+  /**
+   * Generate an EVM-compatible wallet for a specific network
+   * Supports Ethereum and other EVM chains
+   */
+  generateEVMWallet(networkId: string, existingMnemonic?: string): GeneratedWallet {
+    this.logger.debug(`Generating EVM wallet for network ${networkId}`);
 
-    // For EVM-compatible chains (Ethereum and Polygon)
+    // Use existing mnemonic or generate a new one
+    const mnemonic = existingMnemonic || bip39.generateMnemonic();
+
+    // Create HD wallet from mnemonic
     const hdNode = ethers.HDNodeWallet.fromMnemonic(
       ethers.Mnemonic.fromPhrase(mnemonic),
     );
@@ -35,7 +42,7 @@ export class WalletGeneratorService {
     return {
       address: hdNode.address,
       privateKey: hdNode.privateKey,
-      mnemonic: mnemonic,
+      bip39Mnemonic: mnemonic,
       publicKey: hdNode.publicKey,
       derivationPath: `m/44'/60'/0'/0/0`, // Standard path for EVM chains
       extendedKey: hdNode.extendedKey,

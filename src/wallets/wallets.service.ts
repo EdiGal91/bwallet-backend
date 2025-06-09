@@ -65,18 +65,22 @@ export class WalletsService {
       );
     }
 
-    // Create and save the workspace wallet
+    // Create the workspace wallet
+    const workspaceMnemonic = this.walletGeneratorService.generateBIP39Mnemonic();
+    
     const workspaceWallet = new this.workspaceWalletModel({
       name: createWorkspaceWalletDto.name,
-      workspace: createWorkspaceWalletDto.workspaceId,
+      workspace: workspace.id,
+      bip39Mnemonic: workspaceMnemonic,
     });
+
     await workspaceWallet.save();
 
-    // Create wallets for each network
     const wallets: Wallet[] = [];
+
     for (const network of createWorkspaceWalletDto.networks) {
-      // Generate a new wallet for the specified network
-      const generatedWallet = this.walletGeneratorService.generateMainWallet(network.networkId);
+      // Generate a new wallet for the specified network using the workspace mnemonic
+      const generatedWallet = this.walletGeneratorService.generateEVMWallet(network.networkId, workspaceMnemonic);
 
       // Create and save the wallet
       const wallet = new this.walletModel({
@@ -86,7 +90,6 @@ export class WalletsService {
         address: generatedWallet.address,
         publicKey: generatedWallet.publicKey,
         privateKey: generatedWallet.privateKey,
-        mnemonic: generatedWallet.mnemonic,
         derivationPath: generatedWallet.derivationPath,
         extendedKey: generatedWallet.extendedKey,
         balance: 0,

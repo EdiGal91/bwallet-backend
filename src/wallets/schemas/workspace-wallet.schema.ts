@@ -16,6 +16,8 @@ export type WorkspaceWalletDocument = WorkspaceWallet & Document;
       }
       delete ret._id;
       delete ret.__v;
+      // Never expose sensitive data
+      delete ret.bip39Mnemonic;
       return ret;
     },
     /* eslint-enable */
@@ -33,6 +35,13 @@ export class WorkspaceWallet {
     required: true,
   })
   workspace: Workspace;
+
+  @Prop({
+    required: false,
+    select: false, // Never select by default for security
+  })
+  // BTC, ETH/EVM, TRON, Solana
+  bip39Mnemonic?: string;
 
   @Prop()
   createdAt?: Date;

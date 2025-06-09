@@ -21,8 +21,7 @@ export enum WalletType {
       }
       delete ret._id;
       delete ret.__v;
-      // Never expose the mnemonic or private keys
-      delete ret.mnemonic;
+      // Never expose the private keys
       delete ret.privateKey;
       delete ret.extendedKey;
       return ret;
@@ -66,12 +65,6 @@ export class Wallet {
     select: false, // Never select by default for security
   })
   privateKey?: string;
-
-  @Prop({
-    required: false,
-    select: false, // Never select by default for security
-  })
-  mnemonic?: string;
 
   @Prop({
     required: false,
