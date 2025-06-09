@@ -10,6 +10,7 @@ import {
   UnauthorizedException,
   Get,
   Query,
+  Redirect,
 } from '@nestjs/common';
 import { Response } from 'express';
 import { AuthService } from './auth.service';
@@ -19,6 +20,7 @@ import { LocalAuthGuard } from './guards/local-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
 import { RequestWithUser, RequestWithUserDocument } from '../common/types/request.types';
+import { GoogleAuthGuard } from './guards/google-auth.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -27,7 +29,6 @@ export class AuthController {
   @Post('register')
   async register(@Body() createUserDto: CreateUserDto): Promise<User> {
     const user = await this.authService.register(createUserDto);
-    // No longer auto login after registration as email verification is required
     return user;
   }
 
@@ -98,5 +99,21 @@ export class AuthController {
   ): Promise<{ user: User }> {
     const user = await this.authService.getCurrentUser(req.user.userId);
     return { user };
+  }
+
+  @Get('google')
+  @UseGuards(GoogleAuthGuard)
+  async googleAuth() {
+    // This endpoint initiates the Google OAuth flow
+  }
+
+  @Get('google/callback')
+  @UseGuards(GoogleAuthGuard)
+  async googleAuthCallback(
+    @Req() req: RequestWithUserDocument,
+    @Res() response: Response,
+  ) {
+    await this.authService.login(req.user, req, response);
+    return response.redirect('http://localhost:5173');
   }
 }
