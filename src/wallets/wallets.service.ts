@@ -9,7 +9,6 @@ import { Model } from 'mongoose';
 import { Wallet, WalletDocument, WalletType } from './schemas/wallet.schema';
 import { WalletGeneratorService } from './wallet-generator.service';
 import { WorkspacesService } from '../workspaces/workspaces.service';
-import { CreateWalletDto } from './dto/create-wallet.dto';
 import { WorkspaceMembersService } from '../workspace-members/workspace-members.service';
 import {
   WorkspaceWallet,
