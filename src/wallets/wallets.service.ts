@@ -35,6 +35,19 @@ export class WalletsService {
   ) {}
 
   /**
+   * Get the next account index for a workspace
+   * This follows BIP39 standard for account derivation
+   */
+  private async getNextAccountIndex(workspaceId: string): Promise<number> {
+    const lastWallet = await this.workspaceWalletModel
+      .findOne({ workspace: workspaceId })
+      .sort({ accountIndex: -1 })
+      .exec();
+
+    return lastWallet ? lastWallet.accountIndex + 1 : 0;
+  }
+
+  /**
    * Create a new workspace wallet with associated blockchain wallets
    */
   async createWorkspaceWallet(
@@ -65,11 +78,13 @@ export class WalletsService {
       );
     }
 
-    // Create the workspace wallet
+    // Get the next account index for this workspace
+    const accountIndex = await this.getNextAccountIndex(createWorkspaceWalletDto.workspaceId);
     
     const workspaceWallet = new this.workspaceWalletModel({
       name: createWorkspaceWalletDto.name,
-      workspace: workspace.id,
+      workspace: createWorkspaceWalletDto.workspaceId,
+      accountIndex,
     });
 
     await workspaceWallet.save();

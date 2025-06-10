@@ -7,7 +7,6 @@ export type WorkspaceDocument = Workspace & Document;
   timestamps: true,
   toJSON: {
     virtuals: true,
-    /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
     transform: (_, ret) => {
       if (ret._id) {
         ret.id = ret._id.toString();
@@ -18,7 +17,6 @@ export type WorkspaceDocument = Workspace & Document;
       delete ret.bip39Mnemonic;
       return ret;
     },
-    /* eslint-enable */
   },
 })
 export class Workspace {

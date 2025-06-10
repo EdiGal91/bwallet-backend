@@ -34,6 +34,9 @@ export class WorkspaceWallet {
   })
   workspace: Workspace;
 
+  @Prop({ required: true })
+  accountIndex: number;
+
   @Prop()
   createdAt?: Date;
 
@@ -43,3 +46,6 @@ export class WorkspaceWallet {
 
 export const WorkspaceWalletSchema =
   SchemaFactory.createForClass(WorkspaceWallet);
+
+// Create a compound index on workspace and accountIndex to ensure uniqueness
+WorkspaceWalletSchema.index({ workspace: 1, accountIndex: 1 }, { unique: true });
