@@ -7,7 +7,7 @@ import {
   WorkspaceWallet,
   WorkspaceWalletSchema,
 } from './schemas/workspace-wallet.schema';
-import { WalletGeneratorService } from './wallet-generator.service';
+import { WalletGeneratorModule } from './wallet-generator.module';
 import { WorkspacesModule } from '../workspaces/workspaces.module';
 import { WorkspaceMembersModule } from '../workspace-members/workspace-members.module';
 import { NetworksModule } from '../networks/networks.module';
@@ -21,9 +21,10 @@ import { NetworksModule } from '../networks/networks.module';
     WorkspacesModule,
     WorkspaceMembersModule,
     NetworksModule,
+    WalletGeneratorModule,
   ],
   controllers: [WalletsController],
-  providers: [WalletsService, WalletGeneratorService],
+  providers: [WalletsService],
   exports: [WalletsService],
 })
 export class WalletsModule {}

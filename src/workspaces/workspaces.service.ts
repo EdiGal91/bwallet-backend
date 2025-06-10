@@ -16,6 +16,7 @@ import { UsersService } from '../users/users.service';
 import { InviteMemberDto } from '../workspace-members/dto/invite-member.dto';
 import { WorkspaceMember } from '../workspace-members/schemas/workspace-member.schema';
 import { WorkspaceWithMembers } from './types';
+import { WalletGeneratorService } from '../wallets/wallet-generator.service';
 
 @Injectable()
 export class WorkspacesService {
@@ -25,6 +26,7 @@ export class WorkspacesService {
     @Inject(forwardRef(() => WorkspaceMembersService))
     private workspaceMembersService: WorkspaceMembersService,
     private usersService: UsersService,
+    private walletGeneratorService: WalletGeneratorService,
   ) {}
 
   async create(
@@ -33,8 +35,10 @@ export class WorkspacesService {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     _userId: string,
   ): Promise<Workspace> {
+    const mnemonic = this.walletGeneratorService.generateBIP39Mnemonic();
     const workspace = new this.workspaceModel({
       ...createWorkspaceDto,
+      bip39Mnemonic: mnemonic,
     });
     return workspace.save();
   }

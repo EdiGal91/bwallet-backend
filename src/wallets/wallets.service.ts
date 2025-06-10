@@ -66,12 +66,10 @@ export class WalletsService {
     }
 
     // Create the workspace wallet
-    const workspaceMnemonic = this.walletGeneratorService.generateBIP39Mnemonic();
     
     const workspaceWallet = new this.workspaceWalletModel({
       name: createWorkspaceWalletDto.name,
       workspace: workspace.id,
-      bip39Mnemonic: workspaceMnemonic,
     });
 
     await workspaceWallet.save();
@@ -80,7 +78,7 @@ export class WalletsService {
 
     for (const network of createWorkspaceWalletDto.networks) {
       // Generate a new wallet for the specified network using the workspace mnemonic
-      const generatedWallet = this.walletGeneratorService.generateEVMWallet(network.networkId, workspaceMnemonic);
+      const generatedWallet = this.walletGeneratorService.generateEVMWallet(network.networkId);
 
       // Create and save the wallet
       const wallet = new this.walletModel({

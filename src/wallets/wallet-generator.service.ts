@@ -19,18 +19,20 @@ export class WalletGeneratorService {
    * Generate a new BIP39 mnemonic
    */
   generateBIP39Mnemonic(): string {
-    return bip39.generateMnemonic();
+     // 128 => 12 words [default]
+     // 256 => 24 words
+    return bip39.generateMnemonic(256);
   }
 
   /**
    * Generate an EVM-compatible wallet for a specific network
    * Supports Ethereum and other EVM chains
    */
-  generateEVMWallet(networkId: string, existingMnemonic?: string): GeneratedWallet {
+  generateEVMWallet(networkId: string): GeneratedWallet {
     this.logger.debug(`Generating EVM wallet for network ${networkId}`);
 
     // Use existing mnemonic or generate a new one
-    const mnemonic = existingMnemonic || bip39.generateMnemonic();
+    const mnemonic = bip39.generateMnemonic();
 
     // Create HD wallet from mnemonic
     const hdNode = ethers.HDNodeWallet.fromMnemonic(
