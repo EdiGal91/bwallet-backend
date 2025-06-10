@@ -90,6 +90,7 @@ export class WalletsService {
     if (validNetworkRequests.length === 0) {
       throw new NotFoundException('None of the requested networks exist or are active');
     }
+    const bip39Mnemonic = await this.workspacesService.getBip39MnemonicById(workspace.id!)
 
     // Get the next account index for this workspace
     const accountIndex = await this.getNextAccountIndex(createWorkspaceWalletDto.workspaceId);
@@ -109,7 +110,7 @@ export class WalletsService {
       const networkDetails = networks.find(n => n.id === networkRequest.networkId)!;
       const addressIndex = 0;
 
-      const generatedWallet = this.walletGeneratorService.generateWallet(workspace.bip39Mnemonic, networkDetails.name, accountIndex, addressIndex);
+      const generatedWallet = this.walletGeneratorService.generateWallet(bip39Mnemonic, networkDetails.name, accountIndex, addressIndex);
 
       // Create and save the wallet
       const wallet = new this.walletModel({

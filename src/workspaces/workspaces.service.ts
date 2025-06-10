@@ -95,6 +95,20 @@ export class WorkspacesService {
     return workspace;
   }
 
+  /**
+   * Get workspace's BIP39 mnemonic by ID
+   * @param id - Workspace ID
+   * @returns The BIP39 mnemonic phrase
+   * @throws NotFoundException if workspace not found
+   */
+  async getBip39MnemonicById(id: string): Promise<string> {
+    const workspace = await this.workspaceModel.findById(id).select('+bip39Mnemonic').exec();
+    if (!workspace) {
+      throw new NotFoundException(`Workspace with ID ${id} not found`);
+    }
+    return workspace.bip39Mnemonic;
+  }
+
   /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
   // Check if a user has specified role or higher privileges in a workspace
   async checkUserRole(
