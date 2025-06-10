@@ -17,9 +17,6 @@ export type WalletDocument = Wallet & Document;
       }
       delete ret._id;
       delete ret.__v;
-      // Never expose the private keys
-      delete ret.privateKey;
-      delete ret.extendedKey;
       return ret;
     },
     /* eslint-enable */
@@ -47,18 +44,6 @@ export class Wallet {
 
   @Prop()
   publicKey?: string;
-
-  @Prop({
-    required: false,
-    select: false, // Never select by default for security
-  })
-  privateKey?: string;
-
-  @Prop({
-    required: false,
-    select: false, // Never select by default for security
-  })
-  extendedKey?: string;
 
   @Prop()
   derivationPath?: string;

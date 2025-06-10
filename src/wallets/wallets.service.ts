@@ -78,6 +78,19 @@ export class WalletsService {
       );
     }
 
+    // Get all requested networks that exist and are active
+    const networkIds = createWorkspaceWalletDto.networks.map(n => n.networkId);
+    const networks = await this.networksService.findByIds(networkIds);
+    
+    // Filter out networks that don't exist or are inactive
+    const validNetworkRequests = createWorkspaceWalletDto.networks.filter(request => 
+      networks.some(network => network.id === request.networkId)
+    );
+
+    if (validNetworkRequests.length === 0) {
+      throw new NotFoundException('None of the requested networks exist or are active');
+    }
+
     // Get the next account index for this workspace
     const accountIndex = await this.getNextAccountIndex(createWorkspaceWalletDto.workspaceId);
     
@@ -91,21 +104,22 @@ export class WalletsService {
 
     const wallets: Wallet[] = [];
 
-    for (const network of createWorkspaceWalletDto.networks) {
-      // Generate a new wallet for the specified network using the workspace mnemonic
-      const generatedWallet = this.walletGeneratorService.generateEVMWallet(network.networkId);
+    for (const networkRequest of validNetworkRequests) {
+      // Get network details to determine its type
+      const networkDetails = networks.find(n => n.id === networkRequest.networkId)!;
+      const addressIndex = 0;
+
+      const generatedWallet = this.walletGeneratorService.generateWallet(workspace.bip39Mnemonic, networkDetails.name, accountIndex, addressIndex);
 
       // Create and save the wallet
       const wallet = new this.walletModel({
-        networkId: network.networkId,
+        networkId: networkRequest.networkId,
         workspaceWallet: workspaceWallet.id,
         address: generatedWallet.address,
         publicKey: generatedWallet.publicKey,
-        privateKey: generatedWallet.privateKey,
         derivationPath: generatedWallet.derivationPath,
-        extendedKey: generatedWallet.extendedKey,
         balance: 0,
-        selectedTokenIds: network.tokenIds,
+        selectedTokenIds: networkRequest.tokenIds,
       });
 
       const savedWallet = await wallet.save();

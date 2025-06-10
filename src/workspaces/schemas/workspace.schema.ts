@@ -30,7 +30,7 @@ export class Workspace {
     select: false, // Never select by default for security
   })
   // BTC, ETH/EVM, TRON, Solana
-  bip39Mnemonic?: string;
+  bip39Mnemonic: string;
 
   @Prop()
   createdAt?: Date;

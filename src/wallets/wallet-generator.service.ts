@@ -5,10 +5,7 @@ import * as ethers from 'ethers';
 export interface GeneratedWallet {
   address: string;
   publicKey: string;
-  privateKey: string;
-  bip39Mnemonic?: string;
   derivationPath?: string;
-  extendedKey?: string;
 }
 
 @Injectable()
@@ -25,27 +22,60 @@ export class WalletGeneratorService {
   }
 
   /**
+   * Generate derivation path based on network name and account/address indices
+   * Following BIP standard: m/purpose'/coin_type'/account_index'/change/address_index
+   * @param networkName - Name of the network
+   * @param accountIndex - Account index for derivation (default: 0)
+   * @param addressIndex - Address index for derivation (default: 0)
+   * @param purpose - BIP purpose number (default: 44 for BIP44)
+   * @throws Error if network's coin type is not defined
+   */
+  private generateDerivationPath(
+    networkName: string, 
+    accountIndex: number = 0,
+    addressIndex: number = 0,
+    purpose: number = 44
+  ): string {
+    const coinTypes: Record<string, number> = {
+      'ethereum': 60,  // ETH and EVM chains
+      'polygon': 60,
+    };
+
+    const coinType = coinTypes[networkName.toLowerCase()];
+    if (coinType === undefined) {
+      throw new Error(`Coin type not defined for network: ${networkName}`);
+    }
+
+    return `m/${purpose}'/${coinType}'/${accountIndex}'/0/${addressIndex}`;
+  }
+
+  generateWallet(mnemonic: string, networkName: string, accountIndex: number, addressIndex): GeneratedWallet {
+    if(networkName==='ethereum') {
+      const derivationPath = this.generateDerivationPath(networkName, accountIndex, addressIndex);
+      return this.generateEthereumWallet(mnemonic, derivationPath);
+    }
+    if(networkName==='polygon') {
+      const derivationPath = this.generateDerivationPath(networkName, accountIndex, addressIndex);
+      return this.generateEthereumWallet(mnemonic, derivationPath);
+    }
+    // Add more network types here as needed
+    throw new Error(`Unsupported network type: ${networkName}`);
+  }
+
+  /**
    * Generate an EVM-compatible wallet for a specific network
    * Supports Ethereum and other EVM chains
    */
-  generateEVMWallet(networkId: string): GeneratedWallet {
-    this.logger.debug(`Generating EVM wallet for network ${networkId}`);
+  private generateEthereumWallet(mnemonic: string, derivationPath: string): GeneratedWallet {
 
-    // Use existing mnemonic or generate a new one
-    const mnemonic = bip39.generateMnemonic();
-
-    // Create HD wallet from mnemonic
     const hdNode = ethers.HDNodeWallet.fromMnemonic(
       ethers.Mnemonic.fromPhrase(mnemonic),
     );
 
     return {
       address: hdNode.address,
-      privateKey: hdNode.privateKey,
-      bip39Mnemonic: mnemonic,
       publicKey: hdNode.publicKey,
-      derivationPath: `m/44'/60'/0'/0/0`, // Standard path for EVM chains
-      extendedKey: hdNode.extendedKey,
+      derivationPath,
     };
   }
 }

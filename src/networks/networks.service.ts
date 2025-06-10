@@ -61,4 +61,12 @@ export class NetworksService {
 
     return networksWithTokens as NetworkWithTokens[];
   }
+
+  /**
+   * Find networks by an array of IDs (only active networks)
+   */
+  async findByIds(ids: string[]): Promise<Network[]> {
+    if (!ids.length) return [];
+    return this.networkModel.find({ _id: { $in: ids }, isActive: true }).exec();
+  }
 }
