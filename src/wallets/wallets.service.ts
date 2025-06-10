@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Wallet, WalletDocument, WalletType } from './schemas/wallet.schema';
+import { Wallet, WalletDocument } from './schemas/wallet.schema';
 import { WalletGeneratorService } from './wallet-generator.service';
 import { WorkspacesService } from '../workspaces/workspaces.service';
 import { WorkspaceMembersService } from '../workspace-members/workspace-members.service';
@@ -85,7 +85,6 @@ export class WalletsService {
       // Create and save the wallet
       const wallet = new this.walletModel({
         networkId: network.networkId,
-        walletType: WalletType.HD_MAIN,
         workspaceWallet: workspaceWallet.id,
         address: generatedWallet.address,
         publicKey: generatedWallet.publicKey,

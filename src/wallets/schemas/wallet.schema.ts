@@ -6,10 +6,6 @@ import { Token } from '../../networks/schemas/token.schema';
 
 export type WalletDocument = Wallet & Document;
 
-export enum WalletType {
-  HD_MAIN = 'hd_main', // Main wallet (master)
-}
-
 @Schema({
   timestamps: true,
   toJSON: {
@@ -38,14 +34,6 @@ export class Wallet {
     required: true,
   })
   networkId: Network;
-
-  @Prop({
-    type: String,
-    enum: Object.values(WalletType),
-    required: true,
-    default: WalletType.HD_MAIN,
-  })
-  walletType: WalletType;
 
   @Prop({
     type: MongooseSchema.Types.ObjectId,

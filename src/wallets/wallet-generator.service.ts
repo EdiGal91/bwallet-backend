@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as bip39 from 'bip39';
 import * as ethers from 'ethers';
-import { WalletType } from './schemas/wallet.schema';
 
 export interface GeneratedWallet {
   address: string;
@@ -10,7 +9,6 @@ export interface GeneratedWallet {
   bip39Mnemonic?: string;
   derivationPath?: string;
   extendedKey?: string;
-  walletType: WalletType;
 }
 
 @Injectable()
@@ -46,7 +44,6 @@ export class WalletGeneratorService {
       publicKey: hdNode.publicKey,
       derivationPath: `m/44'/60'/0'/0/0`, // Standard path for EVM chains
       extendedKey: hdNode.extendedKey,
-      walletType: WalletType.HD_MAIN,
     };
   }
 }
