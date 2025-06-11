@@ -18,6 +18,7 @@ import { CreateWorkspaceWalletDto } from './dto/create-workspace-wallet.dto';
 import { NetworksService } from '../networks/networks.service';
 import { NetworkWithTokens } from '../networks/dto/network-with-tokens.dto';
 import { Token } from '../networks/schemas/token.schema';
+import { Workspace } from '../workspaces/schemas/workspace.schema';
 
 @Injectable()
 export class WalletsService {
@@ -148,7 +149,10 @@ export class WalletsService {
   async findWorkspaceWalletById(
     walletId: string,
     userId: string,
-  ): Promise<WorkspaceWallet & { wallets: Array<Wallet & { network?: NetworkWithTokens; selectedTokens: Token[] }> }> {
+  ): Promise<WorkspaceWallet & { 
+    wallets: Array<Wallet & { network?: NetworkWithTokens; selectedTokens: Token[] }>;
+    workspace: Workspace;
+  }> {
     const wallet = await this.workspaceWalletModel.findById(walletId).exec();
 
     if (!wallet) {
@@ -166,6 +170,9 @@ export class WalletsService {
         `You don't have access to the wallet with ID ${walletId}`,
       );
     }
+
+    // Get workspace details
+    const workspace = await this.workspacesService.findById(workspaceId);
 
     // Get all networks with their tokens
     const networksWithTokens = await this.networksService.findAllWithTokens(false, true);
@@ -192,6 +199,7 @@ export class WalletsService {
     return {
       ...wallet.toJSON(),
       wallets: walletsWithDetails,
+      workspace,
     };
   }
 
@@ -224,7 +232,7 @@ export class WalletsService {
   async findWorkspaceWallets(
     workspaceId: string,
     userId: string,
-  ): Promise<{ data: Array<WorkspaceWallet & { wallets: Wallet[] }> }> {
+  ): Promise<{ data: Array<WorkspaceWallet & { wallets: Wallet[]; workspace: Workspace }> }> {
     // First check if the workspace exists
     const workspace = await this.workspacesService.findById(workspaceId);
 
@@ -248,23 +256,29 @@ export class WalletsService {
       .sort({ createdAt: -1 })
       .exec();
 
-    if (!workspaceWallets.length) {
-      return { data: [] };
-    }
+    // Get all blockchain wallets for these workspace wallets
+    const wallets = await this.walletModel
+      .find({
+        workspaceWallet: { $in: workspaceWallets.map(w => w.id) },
+      })
+      .exec();
 
-    // For each workspace wallet, get its associated wallets
-    const result = await Promise.all(
-      workspaceWallets.map(async (workspaceWallet) => {
-        const wallets = await this.walletModel
-          .find({ workspaceWallet: workspaceWallet._id })
-          .exec();
+    // Group wallets by workspace wallet
+    const walletsByWorkspaceWallet = wallets.reduce((acc, wallet) => {
+      const workspaceWalletId = String(wallet.workspaceWallet);
+      if (!acc[workspaceWalletId]) {
+        acc[workspaceWalletId] = [];
+      }
+      acc[workspaceWalletId].push(wallet);
+      return acc;
+    }, {} as Record<string, Wallet[]>);
 
-        return {
-          ...workspaceWallet.toJSON(),
-          wallets: wallets.map((wallet) => wallet.toJSON()) as Wallet[],
-        };
-      }),
-    );
+    // Combine workspace wallets with their blockchain wallets and workspace info
+    const result = workspaceWallets.map(workspaceWallet => ({
+      ...workspaceWallet.toJSON(),
+      wallets: walletsByWorkspaceWallet[workspaceWallet.id] || [],
+      workspace,
+    }));
 
     return { data: result };
   }
