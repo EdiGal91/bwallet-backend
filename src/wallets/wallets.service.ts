@@ -268,4 +268,41 @@ export class WalletsService {
 
     return { data: result };
   }
+
+  /**
+   * Find all workspace wallets across all workspaces the user has access to
+   */
+  async findAllWorkspaceWallets(
+    userId: string,
+  ): Promise<{ data: Array<WorkspaceWallet & { wallets: Wallet[]; userRole?: string }> }> {
+    // Get all workspaces the user has access to
+    const workspaceIds = await this.workspaceMembersService.findWorkspacesByUser(userId);
+    
+    // For each workspace, get the user's role and wallets
+    const result = await Promise.all(
+      workspaceIds.map(async (workspaceId) => {
+        // Get user's role in the workspace
+        const member = await this.workspaceMembersService.findMemberByWorkspaceAndUser(
+          workspaceId,
+          userId,
+        );
+
+        // Get wallets for this workspace
+        const { data } = await this.findWorkspaceWallets(workspaceId, userId);
+
+        // Add user role to each workspace wallet
+        return data.map(wallet => {
+          const { id, ...restWallet } = wallet
+          return {
+            workspaceWalletId: id,
+          ...restWallet,
+          userRole: member?.role,
+        }
+      });
+      }),
+    );
+
+    // Flatten the array of arrays and return
+    return { data: result.flat() };
+  }
 }
