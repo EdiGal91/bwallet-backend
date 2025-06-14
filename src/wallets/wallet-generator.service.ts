@@ -52,7 +52,8 @@ export class WalletGeneratorService {
   generateWallet(mnemonic: string, networkName: string, accountIndex: number, addressIndex): GeneratedWallet {
     if(networkName==='ethereum') {
       const derivationPath = this.generateDerivationPath(networkName, accountIndex, addressIndex);
-      return this.generateEthereumWallet(mnemonic, derivationPath);
+      const result = this.generateEthereumWallet(mnemonic, derivationPath);
+      return result;
     }
     if(networkName==='polygon') {
       const derivationPath = this.generateDerivationPath(networkName, accountIndex, addressIndex);
@@ -67,9 +68,10 @@ export class WalletGeneratorService {
    * Supports Ethereum and other EVM chains
    */
   private generateEthereumWallet(mnemonic: string, derivationPath: string): GeneratedWallet {
-
-    const hdNode = ethers.HDNodeWallet.fromMnemonic(
-      ethers.Mnemonic.fromPhrase(mnemonic),
+    const hdNode = ethers.HDNodeWallet.fromPhrase(
+      mnemonic,
+      undefined,
+      derivationPath
     );
 
     return {
