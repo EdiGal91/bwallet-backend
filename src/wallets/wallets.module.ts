@@ -7,7 +7,7 @@ import {
   WorkspaceWallet,
   WorkspaceWalletSchema,
 } from './schemas/workspace-wallet.schema';
-import { WalletGeneratorModule } from './wallet-generator.module';
+import { WalletGeneratorModule } from '../wallet-generator/wallet-generator.module';
 import { WorkspacesModule } from '../workspaces/workspaces.module';
 import { WorkspaceMembersModule } from '../workspace-members/workspace-members.module';
 import { NetworksModule } from '../networks/networks.module';

@@ -34,6 +34,9 @@ export class Network {
   @Prop()
   iconUrl?: string;
 
+  @Prop()
+  iconSVG?: string;
+
   @Prop({ required: true })
   rpcUrl: string;
 
@@ -42,6 +45,9 @@ export class Network {
 
   @Prop({ required: true })
   coinType: number;
+
+  @Prop({ required: true })
+  chainId: number;
 
   @Prop({ default: true })
   isActive: boolean;

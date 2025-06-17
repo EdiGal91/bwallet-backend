@@ -7,7 +7,7 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Wallet, WalletDocument } from './schemas/wallet.schema';
-import { WalletGeneratorService } from './wallet-generator.service';
+import { WalletGeneratorService } from '../wallet-generator/wallet-generator.service';
 import { WorkspacesService } from '../workspaces/workspaces.service';
 import { WorkspaceMembersService } from '../workspace-members/workspace-members.service';
 import {
@@ -256,11 +256,12 @@ export class WalletsService {
       .sort({ createdAt: -1 })
       .exec();
 
-    // Get all blockchain wallets for these workspace wallets
+    // Get all blockchain wallets for these workspace wallets with populated network
     const wallets = await this.walletModel
       .find({
         workspaceWallet: { $in: workspaceWallets.map(w => w.id) },
       })
+      .populate('networkId')
       .exec();
 
     // Group wallets by workspace wallet
