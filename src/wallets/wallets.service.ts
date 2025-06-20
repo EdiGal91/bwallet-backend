@@ -261,7 +261,7 @@ export class WalletsService {
       .find({
         workspaceWallet: { $in: workspaceWallets.map(w => w.id) },
       })
-      .populate('networkId')
+      .populate(['networkId', 'selectedTokenIds'])
       .exec();
 
     // Group wallets by workspace wallet
