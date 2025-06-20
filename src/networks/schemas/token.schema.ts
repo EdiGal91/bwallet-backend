@@ -40,6 +40,9 @@ export class Token {
   @Prop()
   iconUrl?: string;
 
+  @Prop()
+  iconSVG?: string;
+
   @Prop({
     type: String,
     enum: Object.values(TokenType),

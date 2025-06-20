@@ -21,6 +21,7 @@ import { Workspace } from './schemas/workspace.schema';
 import { RequestWithUser } from '../common/types/request.types';
 import { InviteMemberDto } from '../workspace-members/dto/invite-member.dto';
 import { AcceptInvitationDto } from '../workspace-members/dto/accept-invitation.dto';
+import { WalletsService } from '../wallets/wallets.service';
 
 @Controller('workspaces')
 @UseGuards(JwtAuthGuard)
@@ -30,6 +31,8 @@ export class WorkspacesController {
     private readonly workspacesService: WorkspacesService,
     @Inject(forwardRef(() => WorkspaceMembersService))
     private readonly workspaceMembersService: WorkspaceMembersService,
+    @Inject(forwardRef(() => WalletsService))
+    private readonly walletsService: WalletsService,
   ) {}
 
   @Post()
@@ -142,6 +145,14 @@ export class WorkspacesController {
     }
 
     return workspace;
+  }
+
+  @Get(':workspaceId/wallets')
+  async findWorkspaceWallets(@Param('workspaceId') workspaceId: string, @Req() req: RequestWithUser) {
+    return this.walletsService.findWorkspaceWallets(
+      workspaceId,
+      req.user.userId,
+    );
   }
 
   @Post(':workspaceId/invite')

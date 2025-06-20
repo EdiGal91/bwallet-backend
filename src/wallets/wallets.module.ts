@@ -8,6 +8,7 @@ import {
   WorkspaceWalletSchema,
 } from './schemas/workspace-wallet.schema';
 import { WalletGeneratorModule } from '../wallet-generator/wallet-generator.module';
+import { forwardRef } from '@nestjs/common';
 import { WorkspacesModule } from '../workspaces/workspaces.module';
 import { WorkspaceMembersModule } from '../workspace-members/workspace-members.module';
 import { NetworksModule } from '../networks/networks.module';
@@ -18,7 +19,7 @@ import { NetworksModule } from '../networks/networks.module';
       { name: Wallet.name, schema: WalletSchema },
       { name: WorkspaceWallet.name, schema: WorkspaceWalletSchema },
     ]),
-    WorkspacesModule,
+    forwardRef(() => WorkspacesModule),
     WorkspaceMembersModule,
     NetworksModule,
     WalletGeneratorModule,

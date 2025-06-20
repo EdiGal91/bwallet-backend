@@ -6,6 +6,7 @@ import { Workspace, WorkspaceSchema } from './schemas/workspace.schema';
 import { WorkspaceMembersModule } from '../workspace-members/workspace-members.module';
 import { UsersModule } from '../users/users.module';
 import { WalletGeneratorModule } from '../wallet-generator/wallet-generator.module';
+import { WalletsModule } from '../wallets/wallets.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { WalletGeneratorModule } from '../wallet-generator/wallet-generator.modu
     forwardRef(() => WorkspaceMembersModule),
     UsersModule,
     WalletGeneratorModule,
+    forwardRef(() => WalletsModule),
   ],
   controllers: [WorkspacesController],
   providers: [WorkspacesService],
