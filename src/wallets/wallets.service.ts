@@ -228,58 +228,59 @@ export class WalletsService {
 
   /**
    * Find all workspace wallets with their related wallets for a specific workspace
+   * Returns an array of workspace wallets, each with its associated blockchain wallets and workspace info
    */
   async findWorkspaceWallets(
     workspaceId: string,
     userId: string,
   ): Promise<{ data: Array<WorkspaceWallet & { wallets: Wallet[]; workspace: Workspace }> }> {
-    // First check if the workspace exists
+    // 1. Check if the workspace exists
     const workspace = await this.workspacesService.findById(workspaceId);
-
     if (!workspace) {
       throw new NotFoundException(`Workspace with ID ${workspaceId} not found`);
     }
 
-    // Check if user has access to the workspace using member service
-    const memberWorkspaceIds =
-      await this.workspaceMembersService.findWorkspacesByUser(userId);
-
+    // 2. Check if user has access to the workspace
+    const memberWorkspaceIds = await this.workspaceMembersService.findWorkspacesByUser(userId);
     if (!memberWorkspaceIds.includes(workspaceId)) {
       throw new UnauthorizedException(
         `You don't have access to the workspace with ID ${workspaceId}`,
       );
     }
 
-    // Find all workspace wallets for this workspace
+    // 3. Find all workspace wallets for this workspace
     const workspaceWallets = await this.workspaceWalletModel
       .find({ workspace: workspaceId })
       .sort({ createdAt: -1 })
       .exec();
 
-    // Get all blockchain wallets for these workspace wallets with populated network
-    const wallets = await this.walletModel
+    // 4. Get all blockchain wallets for these workspace wallets
+    const allWorkspaceWallets = await this.walletModel
       .find({
         workspaceWallet: { $in: workspaceWallets.map(w => w.id) },
       })
       .populate(['networkId', 'selectedTokens'])
       .exec();
 
-    // Group wallets by workspace wallet
-    const walletsByWorkspaceWallet = wallets.reduce((acc, wallet) => {
+    // 5. Group wallets by workspace wallet ID for easy lookup
+    type workspaceWalletId = string
+    const walletsGroupedByWorkspaceWalletId: Record<workspaceWalletId, Wallet[]> = {};
+    for (const wallet of allWorkspaceWallets) {
       const workspaceWalletId = String(wallet.workspaceWallet);
-      if (!acc[workspaceWalletId]) {
-        acc[workspaceWalletId] = [];
+      if (!walletsGroupedByWorkspaceWalletId[workspaceWalletId]) {
+        walletsGroupedByWorkspaceWalletId[workspaceWalletId] = [];
       }
-      acc[workspaceWalletId].push(wallet);
-      return acc;
-    }, {} as Record<string, Wallet[]>);
+      walletsGroupedByWorkspaceWalletId[workspaceWalletId].push(wallet);
+    }
 
-    // Combine workspace wallets with their blockchain wallets and workspace info
-    const result = workspaceWallets.map(workspaceWallet => ({
-      ...workspaceWallet.toJSON(),
-      wallets: walletsByWorkspaceWallet[workspaceWallet.id] || [],
-      workspace,
-    }));
+    // 6. Combine workspace wallets with their blockchain wallets and workspace info
+    const result = workspaceWallets.map(workspaceWallet => {
+      return {
+        ...workspaceWallet.toJSON(),
+        wallets: walletsGroupedByWorkspaceWalletId[workspaceWallet.id] || [],
+        workspace,
+      };
+    });
 
     return { data: result };
   }
