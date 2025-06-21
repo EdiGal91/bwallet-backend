@@ -57,7 +57,7 @@ export class Wallet {
     type: MongooseSchema.Types.ObjectId,
     ref: 'Token'
   }])
-  selectedTokenIds: Token[];
+  selectedTokens: Token[];
 
   @Prop()
   createdAt?: Date;

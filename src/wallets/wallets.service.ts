@@ -121,7 +121,7 @@ export class WalletsService {
         publicKey: generatedWallet.publicKey,
         derivationPath: generatedWallet.derivationPath,
         balance: 0,
-        selectedTokenIds: networkRequest.tokenIds,
+        selectedTokens: networkRequest.tokenIds,
       });
 
       const savedWallet = await wallet.save();
@@ -186,7 +186,7 @@ export class WalletsService {
     const walletsWithDetails = wallets.map(wallet => {
       const network = networksWithTokens.find(n => n.id === String(wallet.networkId));
       const selectedTokens = network?.tokens.filter(token => 
-        wallet.selectedTokenIds.some(id => String(id) === String(token.id))
+        wallet.selectedTokens.some(id => String(id) === String(token.id))
       ) || [];
 
       return {
@@ -261,7 +261,7 @@ export class WalletsService {
       .find({
         workspaceWallet: { $in: workspaceWallets.map(w => w.id) },
       })
-      .populate(['networkId', 'selectedTokenIds'])
+      .populate(['networkId', 'selectedTokens'])
       .exec();
 
     // Group wallets by workspace wallet
