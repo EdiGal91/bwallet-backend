@@ -38,7 +38,7 @@ export class EtherscanService {
     const qs = new URLSearchParams({
       module: 'account',
       action: 'tokenbalance',
-      chainid: chainId.toString(),           // ← correct param name
+      chainid: chainId.toString(),
       contractaddress: contractAddress,
       address,
       tag: 'latest',
@@ -50,7 +50,40 @@ export class EtherscanService {
       if (data.status !== '1') {
         throw new Error(data.message || 'Etherscan returned error');
       }
-      return data.result;                    // still needs /10**decimals in caller
+      return data.result;
+    } catch (err: any) {
+      throw new HttpException(
+        `Etherscan error: ${err.message ?? 'unknown'}`,
+        err.response?.status ?? 502,
+      );
+    }
+  }
+
+  /**
+   * Returns the native token balance (ETH, MATIC, etc.) for `address`
+   * on the chain identified by `chainId`.
+   *
+   * @see https://docs.etherscan.io/etherscan-v2/api-endpoints/accounts#get-ether-balance-for-a-single-address
+   */
+  async getNativeWeiBalance(
+    address: string,
+    chainId: number,
+  ): Promise<string> {
+    const qs = new URLSearchParams({
+      module: 'account',
+      action: 'balance',
+      chainid: chainId.toString(),
+      address,
+      tag: 'latest',
+      apikey: this.apiKey,
+    });
+
+    try {
+      const { data } = await this.http.get<EtherscanResponse>(`?${qs}`);
+      if (data.status !== '1') {
+        throw new Error(data.message || 'Etherscan returned error');
+      }
+      return data.result;
     } catch (err: any) {
       throw new HttpException(
         `Etherscan error: ${err.message ?? 'unknown'}`,
