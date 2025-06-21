@@ -1,11 +1,12 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
-import { Wallet } from '../wallets/schemas/wallet.schema';
-import { Token } from '../networks/schemas/token.schema';
+import { Wallet } from '../../wallets/schemas/wallet.schema';
+import { Token } from '../../networks/schemas/token.schema';
 
 export type AssetBalanceDocument = AssetBalance & Document;
 
 @Schema({
+  collection: 'asset_balance',
   timestamps: true,
   toJSON: {
     virtuals: true,

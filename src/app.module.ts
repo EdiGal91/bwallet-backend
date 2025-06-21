@@ -11,6 +11,7 @@ import { WalletsModule } from './wallets/wallets.module';
 import { NetworksModule } from './networks/networks.module';
 import { CheckoutSessionsModule } from './checkout-sessions/checkout-sessions.module';
 import mongoose from 'mongoose';
+import { BalanceModule } from './balance/balance.module';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import mongoose from 'mongoose';
     WalletsModule,
     NetworksModule,
     CheckoutSessionsModule,
+    BalanceModule,
   ],
   controllers: [AppController],
   providers: [AppService],
