@@ -37,7 +37,8 @@ export class WalletsController {
   async findWorkspaceWallets(
     @Req() req: RequestWithUser,
   ): Promise<{ data: Array<WorkspaceWallet & { wallets: Wallet[]; userRole?: string }> }> {
-    return this.walletsService.findAllWorkspaceWallets(req.user.userId);
+    const result = await this.walletsService.findAllWorkspaceWallets(req.user.userId);
+    return result
   }
 
   @Get(':id')

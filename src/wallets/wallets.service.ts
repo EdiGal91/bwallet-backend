@@ -19,6 +19,7 @@ import { NetworksService } from '../networks/networks.service';
 import { NetworkWithTokens } from '../networks/dto/network-with-tokens.dto';
 import { Token } from '../networks/schemas/token.schema';
 import { Workspace } from '../workspaces/schemas/workspace.schema';
+import { WalletBalanceService } from '../balance/wallet-balance.service';
 
 @Injectable()
 export class WalletsService {
@@ -33,6 +34,7 @@ export class WalletsService {
     private readonly workspacesService: WorkspacesService,
     private readonly workspaceMembersService: WorkspaceMembersService,
     private readonly networksService: NetworksService,
+    private readonly walletBalanceService: WalletBalanceService,
   ) {}
 
   /**
@@ -290,35 +292,47 @@ export class WalletsService {
    */
   async findAllWorkspaceWallets(
     userId: string,
-  ): Promise<{ data: Array<WorkspaceWallet & { wallets: Wallet[]; userRole?: string }> }> {
-    // Get all workspaces the user has access to
+  ): Promise<{ data: Array<WorkspaceWallet & { wallets: (Wallet & { balances: Array<{ token: Token, balance: string }> })[]; userRole?: string }> }> {
     const workspaceIds = await this.workspaceMembersService.findWorkspacesByUser(userId);
-    
-    // For each workspace, get the user's role and wallets
-    const result = await Promise.all(
+    const result = (await Promise.all(
       workspaceIds.map(async (workspaceId) => {
-        // Get user's role in the workspace
-        const member = await this.workspaceMembersService.findMemberByWorkspaceAndUser(
-          workspaceId,
-          userId,
+        const userRole = await this.getUserRoleForWorkspace(workspaceId, userId);
+        const workspaceWallets = await this.getWorkspaceWalletsWithBalances(workspaceId, userId, userRole);
+        return workspaceWallets;
+      })
+    )).flat();
+    return { data: result };
+  }
+
+  private async getUserRoleForWorkspace(workspaceId: string, userId: string): Promise<string | undefined> {
+    const member = await this.workspaceMembersService.findMemberByWorkspaceAndUser(workspaceId, userId);
+    return member?.role;
+  }
+
+  private async getWorkspaceWalletsWithBalances(
+    workspaceId: string,
+    userId: string,
+    userRole?: string
+  ): Promise<Array<WorkspaceWallet & { wallets: (Wallet & { balances: Array<{ token: Token, balance: string }> })[]; userRole?: string }>> {
+    const { data } = await this.findWorkspaceWallets(workspaceId, userId);
+    return Promise.all(
+      data.map(async (workspaceWallet) => {
+        const wallets = await Promise.all(
+          workspaceWallet.wallets.map(wallet => this.getWalletWithBalances(wallet))
         );
-
-        // Get wallets for this workspace
-        const { data } = await this.findWorkspaceWallets(workspaceId, userId);
-
-        // Add user role to each workspace wallet
-        return data.map(wallet => {
-          const { id, ...restWallet } = wallet
-          return {
-            workspaceWalletId: id,
-          ...restWallet,
-          userRole: member?.role,
-        }
-      });
-      }),
+        return {
+          ...workspaceWallet,
+          wallets,
+          userRole,
+        };
+      })
     );
+  }
 
-    // Flatten the array of arrays and return
-    return { data: result.flat() };
+  private async getWalletWithBalances(wallet: Wallet): Promise<Wallet & { balances: Array<{ token: Token, balance: string }> }> {
+    const populatedWallet = await this.walletModel.findById(wallet.id).populate('selectedTokens').populate('networkId').exec();
+    if (!populatedWallet) throw new NotFoundException(`Wallet with ID ${wallet.id} not found`);
+    const balances = await this.walletBalanceService.getWalletAssetsBalance(populatedWallet as any);
+    return { ...populatedWallet.toJSON(), balances };
   }
 }

@@ -12,6 +12,7 @@ import { forwardRef } from '@nestjs/common';
 import { WorkspacesModule } from '../workspaces/workspaces.module';
 import { WorkspaceMembersModule } from '../workspace-members/workspace-members.module';
 import { NetworksModule } from '../networks/networks.module';
+import { BalanceModule } from '../balance/balance.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { NetworksModule } from '../networks/networks.module';
     WorkspaceMembersModule,
     NetworksModule,
     WalletGeneratorModule,
+    BalanceModule,
   ],
   controllers: [WalletsController],
   providers: [WalletsService],
