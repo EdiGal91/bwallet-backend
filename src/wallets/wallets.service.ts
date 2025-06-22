@@ -278,7 +278,6 @@ export class WalletsService {
         });
       }
     });
-    console.log(wallets);
     
     // 5. Group wallets by workspace wallet ID for easy lookup
     type workspaceWalletId = string
