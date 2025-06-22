@@ -254,20 +254,36 @@ export class WalletsService {
     const workspaceWallets = await this.workspaceWalletModel
       .find({ workspace: workspaceId })
       .sort({ createdAt: -1 })
-      .exec();
+      .exec()
 
     // 4. Get all blockchain wallets for these workspace wallets
-    const allWorkspaceWallets = await this.walletModel
+    const _allWallets = await this.walletModel
       .find({
         workspaceWallet: { $in: workspaceWallets.map(w => w.id) },
       })
       .populate(['networkId', 'selectedTokens'])
       .exec();
 
+    const wallets = _allWallets.map(wallet => wallet.toJSON())
+    const _balances = await Promise.all(
+      wallets.map(wallet => this.walletBalanceService.getWalletAssetsBalance(wallet))
+    );
+    // For each wallet, add balance to each selectedToken using the balances for that wallet only
+    wallets.forEach((wallet, idx) => {
+      const balances = _balances[idx]; // balances for this wallet
+      if (wallet.selectedTokens && Array.isArray(wallet.selectedTokens)) {
+        wallet.selectedTokens = wallet.selectedTokens.map(token => {
+          const found = balances.find(b => String(b.token.id) === String(token.id));
+          return found ? { ...token, balance: found.balance } : token;
+        });
+      }
+    });
+    console.log(wallets);
+    
     // 5. Group wallets by workspace wallet ID for easy lookup
     type workspaceWalletId = string
     const walletsGroupedByWorkspaceWalletId: Record<workspaceWalletId, Wallet[]> = {};
-    for (const wallet of allWorkspaceWallets) {
+    for (const wallet of wallets) {
       const workspaceWalletId = String(wallet.workspaceWallet);
       if (!walletsGroupedByWorkspaceWalletId[workspaceWalletId]) {
         walletsGroupedByWorkspaceWalletId[workspaceWalletId] = [];
